@@ -9,6 +9,8 @@ class PybulletEnviorement:
         p.setGravity(0, 0, -9.81)
         self.plane_id = p.loadURDF("plane.urdf")
         self.Cylinder=Cylinder()
+        self.x_goal = p.addUserDebugParameter("X", -10, 10, 0)
+        self.y_goal=p.addUserDebugParameter("Y", -10, 10, 0)
     
     def run_simulation(self):
         while True:
@@ -16,6 +18,7 @@ class PybulletEnviorement:
             time.sleep(1./240.)
             self.Cylinder.updatePosition()
             self.Cylinder.setVelocity(1,1)
+        
             
     
         
@@ -35,7 +38,26 @@ class Cylinder:
         p.resetBaseVelocity(self.cylinder_id, [x, y, 0]) # ignoring setting heading since its a cylinder so heading doesnt matter
     
     
+class PID:
+    def __init__(self):
+        self.kp=0
+        self.ki=0
+        self.kd=0
+    def updateconstants(self,kp,ki,kd):
+        self.kp=kp
+        self.ki=ki
+        self.kd=kd
         
+    def getConstants(self):
+        return {"kp":self.kp,"ki":self.ki,"kd":self.kd}
+    
+    def calculateVelocity(self,error):
+        return self.kp*error
+    
+    
+    
+    # later plan to implement a simple pid to point with the cylinder
+    
 
 
 
