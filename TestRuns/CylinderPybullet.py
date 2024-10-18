@@ -39,19 +39,23 @@ class Cylinder:
     
     
 class PID:
-    def __init__(self):
+    def __init__(self,time):
         self.kp=0
         self.ki=0
         self.kd=0
+        self.previoustime=time
     def updateconstants(self,kp,ki,kd):
         self.kp=kp
         self.ki=ki
         self.kd=kd
         
     def getConstants(self):
+        
         return {"kp":self.kp,"ki":self.ki,"kd":self.kd}
     
-    def calculateVelocity(self,error):
+    def calculateVelocity(self,error,time):
+        
+
         return self.kp*error
     
     
