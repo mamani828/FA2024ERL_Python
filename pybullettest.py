@@ -2,7 +2,7 @@ import pybullet as p
 import pybullet_data
 import time
 import numpy as np
-
+import os
 
 ''' Class that creates the enviorment for the simulation, the idea is to have all simulation 
 functionality in this class and/or in conjuction with other classes. '''
