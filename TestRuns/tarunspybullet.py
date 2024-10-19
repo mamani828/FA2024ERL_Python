@@ -1,3 +1,0 @@
-import pybullet
-
-print("thing")
