@@ -12,6 +12,8 @@ class PybulletEnviorement:
         self.x_vel = p.addUserDebugParameter("X Velocity", -10, 10, 0)
         self.y_vel=p.addUserDebugParameter("Y Velocity", -10, 10, 0)
         self.params={'X_velocity':self.x_vel,'Y_velocity':self.y_vel}
+        
+        
     def run_simulation(self):
         while True:
             p.stepSimulation()
