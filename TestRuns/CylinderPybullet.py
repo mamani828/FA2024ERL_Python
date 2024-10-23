@@ -22,6 +22,15 @@ class PybulletEnviorement:
             x_vel=p.readUserDebugParameter(self.params['X_velocity'])
             y_vel=p.readUserDebugParameter(self.params['Y_velocity'])
             self.Cylinder.setVelocity(x_vel,y_vel)
+    
+    def update_info_text(self):
+            p.addUserDebugText(
+                text=f"velocities: {self.x_vel, self.y_vel}",
+                textPosition=[0, 0, 3],
+                textColorRGB=[1, 1, 1],
+                textSize=1.5,
+                replaceItemUniqueId=self.info_text_id
+            )
         
             
     
