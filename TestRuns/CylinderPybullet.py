@@ -9,11 +9,24 @@ class PybulletEnviorement:
         p.setGravity(0, 0, -9.81)
         self.plane_id = p.loadURDF("plane.urdf")
         self.Cylinder=Cylinder()
+        
+        # Parameters
         self.x_vel = p.addUserDebugParameter("X Velocity", -10, 10, 0)
         self.y_vel=p.addUserDebugParameter("Y Velocity", -10, 10, 0)
         self.x_goalpos = p.addUserDebugParameter("X Goal Position", -100, 100, 0)
         self.y_goalpos=p.addUserDebugParameter("Y Goal Position", -100, 100, 0)
         self.params={'X_velocity':self.x_vel,'Y_velocity':self.y_vel, 'X_goalpos': self.x_goalpos, 'Y_goalpos': self.y_goalpos}
+        
+        # Output
+        self.info_text_id = p.addUserDebugText(
+            text="Velocities",
+            textPosition=[0, 0, 3],
+            textColorRGB=[1, 1, 1],
+            textSize=1.5
+        )
+        
+        
+        
         
         
     def run_simulation(self):
@@ -26,8 +39,8 @@ class PybulletEnviorement:
             self.x_goalpos=p.readUserDebugParameter(self.params['X_goalpos'])
             self.y_goalpos=p.readUserDebugParameter(self.params['Y_goalpos'])
             self.Cylinder.setVelocity(self.x_vel,self.y_vel)
-            
             print(self.Cylinder.position)
+    
 
             
     
