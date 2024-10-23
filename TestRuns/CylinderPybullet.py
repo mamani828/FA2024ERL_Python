@@ -34,11 +34,14 @@ class PybulletEnviorement:
             p.stepSimulation()
             time.sleep(1./240.)
             self.Cylinder.updatePosition()
-            self.x_vel=p.readUserDebugParameter(self.params['X_velocity'])
-            self.y_vel=p.readUserDebugParameter(self.params['Y_velocity'])
-            self.x_goalpos=p.readUserDebugParameter(self.params['X_goalpos'])
-            self.y_goalpos=p.readUserDebugParameter(self.params['Y_goalpos'])
-            self.Cylinder.setVelocity(self.x_vel,self.y_vel)
+            try:
+                self.x_vel=p.readUserDebugParameter(self.params['X_velocity'])
+                self.y_vel=p.readUserDebugParameter(self.params['Y_velocity'])
+                self.x_goalpos=p.readUserDebugParameter(self.params['X_goalpos'])
+                self.y_goalpos=p.readUserDebugParameter(self.params['Y_goalpos'])
+                self.Cylinder.setVelocity(self.x_vel,self.y_vel)
+            except:
+                continue
             print(self.Cylinder.position)
     
 
@@ -76,7 +79,7 @@ class PID:
         
         return {"kp":self.kp,"ki":self.ki,"kd":self.kd}
     
-    def calculateVelocity(self,error,time):
+    def calculateVelocity(self,error):
         
         return self.kp*error
     
