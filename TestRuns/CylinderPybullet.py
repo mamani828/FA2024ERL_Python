@@ -11,18 +11,23 @@ class PybulletEnviorement:
         self.Cylinder=Cylinder()
         self.x_vel = p.addUserDebugParameter("X Velocity", -10, 10, 0)
         self.y_vel=p.addUserDebugParameter("Y Velocity", -10, 10, 0)
-        self.position=self.Cylinder.getPosition()
-        self.params={'X_velocity':self.x_vel,'Y_velocity':self.y_vel}
+        self.x_goalpos = p.addUserDebugParameter("X Goal Position", -100, 100, 0)
+        self.y_goalpos=p.addUserDebugParameter("Y Goal Position", -100, 100, 0)
+        self.params={'X_velocity':self.x_vel,'Y_velocity':self.y_vel, 'X_goalpos': self.x_goalpos, 'Y_goalpos': self.y_goalpos}
         
         
     def run_simulation(self):
         while True:
             p.stepSimulation()
             time.sleep(1./240.)
-            self.position=self.Cylinder.updatePosition()
-            x_vel=p.readUserDebugParameter(self.params['X_velocity'])
-            y_vel=p.readUserDebugParameter(self.params['Y_velocity'])
-            self.Cylinder.setVelocity(x_vel,y_vel)
+            self.Cylinder.updatePosition()
+            self.x_vel=p.readUserDebugParameter(self.params['X_velocity'])
+            self.y_vel=p.readUserDebugParameter(self.params['Y_velocity'])
+            self.x_goalpos=p.readUserDebugParameter(self.params['X_goalpos'])
+            self.y_goalpos=p.readUserDebugParameter(self.params['Y_goalpos'])
+            self.Cylinder.setVelocity(self.x_vel,self.y_vel)
+            
+            print(self.Cylinder.position)
 
             
     
@@ -37,8 +42,7 @@ class Cylinder:
         return p.getBasePositionAndOrientation(self.cylinder_id)[0]
     
     def updatePosition(self):
-        self.position=self.getPosition()[0]
-        print(self.position)
+        self.position=self.getPosition()
         
     def setVelocity(self,x,y):
         p.resetBaseVelocity(self.cylinder_id, [x, y, 0]) # ignoring setting heading since its a cylinder so heading doesnt matter
