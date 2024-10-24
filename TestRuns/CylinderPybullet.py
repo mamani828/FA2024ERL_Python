@@ -80,7 +80,7 @@ class PID:
         return {"kp":self.kp,"ki":self.ki,"kd":self.kd}
     
     def calculateVelocity(self,error):
-        
+        time=(1/2.40)
         return self.kp*error
     
     
