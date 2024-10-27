@@ -2,7 +2,7 @@ import pybullet as p
 import pybullet_data
 import time
 import numpy as np
-import os
+
 
 ''' Class that creates the enviorment for the simulation, the idea is to have all simulation 
 functionality in this class and/or in conjuction with other classes. '''
@@ -28,8 +28,7 @@ class PyBulletEnvironment:
             p.stepSimulation()
             self.check_button()
             time.sleep(1./240.)
-    '''Function that checks the button state, if the button is pressed, it creates a new cube.
-    To extend to extend change XYZ''' 
+    '''Function that checks the button state, if the button is pressed, it creates a new cube.''' 
     def check_button(self):
         current_button_state = p.readUserDebugParameter(self.button_id)
         if current_button_state != self.prev_button_state:
@@ -40,7 +39,7 @@ class PyBulletEnvironment:
     def create_info_text(self):
         self.info_text_id = p.addUserDebugText(
             text="Cubes created: 0",
-            textPosition=[0, 0, 5],
+            textPosition=[0, 0, 3],
             textColorRGB=[1, 1, 1],
             textSize=1.5
         )
@@ -57,8 +56,8 @@ class PyBulletEnvironment:
     @staticmethod
     def create_new_cube():
         cube_size = 0.3
-        x = np.random.normal(0, 1)
-        y = np.random.normal(0, 1)
+        x = np.random.normal(0, 4)
+        y = np.random.normal(0, 4)
         position = [x, y, cube_size/2]
         orientation = p.getQuaternionFromEuler([0, 0, 0])
         color = list(np.random.uniform(0, 1, 3)) + [1]  # Random RGB + Alpha
