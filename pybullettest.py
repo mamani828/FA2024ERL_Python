@@ -28,7 +28,7 @@ class PyBulletEnvironment:
             p.stepSimulation()
             self.check_button()
             time.sleep(1./240.)
-    '''Function that checks the button state, if the button is pressed, it creates a new cube.'''
+    '''Function that checks the button state, if the button is pressed, it creates a new cube.''' 
     def check_button(self):
         current_button_state = p.readUserDebugParameter(self.button_id)
         if current_button_state != self.prev_button_state:
