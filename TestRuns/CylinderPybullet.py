@@ -12,6 +12,7 @@ import sys
     
 
 class PybulletEnviorement():
+    
     def __init__(self):
         super().__init__()
         
@@ -49,6 +50,8 @@ class PybulletEnviorement():
             json.dump(rgb_array.tolist(), file)  
             
     def run_simulation(self):
+        Pid_X=PID(0)
+        Pid_Y=PID(0)
         while True:
             p.stepSimulation()
             time.sleep(1./240.)
@@ -61,6 +64,13 @@ class PybulletEnviorement():
                 self.y_vel=values['Y_velocity']
                 self.x_goalpos=values['X_goalpos']
                 self.y_goalpos=values['Y_goalpos']
+                
+                # receiving the position of the object in pybullet
+                
+                # self.x_vel=Pid_X.calculateVelocity() # add the errors
+                # self.y_vel=Pid_Y.calculateVelocity() # add the errors 
+                
+                
                 self.Cylinder.setVelocity(self.x_vel,self.y_vel)
                 
                 # print(self.ControlPanel.get_values())
@@ -85,12 +95,14 @@ class Cylinder:
     
     
 class PID:
-    def __init__(self,time):
+    def __init__(self, error):
+        self.max_integral=10**15
         self.kp=0
         self.ki=0
         self.kd=0
-        self.previoustime=time
-    def update(self,kp,ki,kd):
+        self.previouserror= error
+        self.i=0
+    def updateConstants(self,kp,ki,kd):
         self.kp=kp
         self.ki=ki
         self.kd=kd
@@ -100,8 +112,16 @@ class PID:
         return {"kp":self.kp,"ki":self.ki,"kd":self.kd}
     
     def calculateVelocity(self,error):
-        time=(1/2.40)
-        return self.kp*error
+        
+        period=(1/2.40)
+        
+        p=self.kp*error
+        
+        i=max(min(i+error*(period),i),-i)
+        
+        d=self.d*(error-self.previouserror)/(period)
+        
+        return self.kp*error+self.ki*i+self.kd*d
     
     
     
