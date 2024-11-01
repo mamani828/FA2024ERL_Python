@@ -4,14 +4,13 @@ import numpy as np
 import pybullet as p
 import pybullet_data
 import time
-import cv2
 from QtGui import Widget
 from PyQt5.QtWidgets import QApplication
 import sys
 
     
 
-class PybulletEnviorement():
+class PybulletEnvironment():
     
     def __init__(self):
         super().__init__()
@@ -25,10 +24,9 @@ class PybulletEnviorement():
         
         # initializing the better pyqt gui
         self.app = QApplication(sys.argv)
-        self.ControlPanel= Widget()
+        self.ControlPanel = Widget()
         self.ControlPanel.show()
-        
-    
+
         
     # not being used for now idk if i should delete
     def update_info_text(self):
@@ -131,7 +129,7 @@ class PID:
 
 
 if __name__ == "__main__":
-    env = PybulletEnviorement()
+    env = PybulletEnvironment()
     try:
         env.run_simulation()
     except KeyboardInterrupt:
