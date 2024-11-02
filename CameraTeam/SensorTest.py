@@ -3,7 +3,19 @@ import pybullet_data
 import numpy as np
 import time
 import os
+import yaml
+import sys
 from Sensors import Camera, Lidar
+
+SENSOR_CONFIG_PATH = os.path.join(os.path.dirname(__file__), 'config/sensors.yaml')
+
+def open_yaml(config_name):
+    try:
+        with open(SENSOR_CONFIG_PATH, 'r') as file:
+            return yaml.safe_load(file)[config_name]
+    except FileNotFoundError:
+        print("Config file not found!")
+        sys.exit(0)
 
 class PybulletSim:
     def __init__(self):
@@ -30,12 +42,14 @@ class Robot:
         racecar_orientation = [0, 0, 0]  # Neutral orientation (Euler Angles)
         initial_racecar_orientation = p.getQuaternionFromEuler(racecar_orientation)  # Quaternions
         racecar = p.loadURDF("racecar/racecar.urdf", racecar_coordinates, initial_racecar_orientation)
-        self.robot_id = racecar # Set robot_id to id returned by loadURDF
+        self.robot_id = racecar  # Set robot_id to id returned by loadURDF
 
 if __name__ == "__main__":
     sim = PybulletSim()
     robot = Robot()
-    camera = Camera(robot)
+
+    camera_config = open_yaml('camera')
+    camera = Camera(robot, camera_config)
 
     for _ in range(100000):
         p.stepSimulation()
