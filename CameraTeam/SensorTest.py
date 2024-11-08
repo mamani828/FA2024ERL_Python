@@ -89,14 +89,15 @@ if __name__ == "__main__":
     camera_config = open_yaml("camera_configs")
     camera = Camera(robot, camera_config)
 
-    #  lidar_config = open_yaml("lidar_configs")
-    #  lidar = Lidar(robot, lidar_config)
+    lidar_config = open_yaml("lidar_configs")
+    lidar = Lidar(robot, lidar_config).setup()
 
     for _ in range(100000):
         p.stepSimulation()
         time.sleep(1 / 240)  # Slow down the simulation to real time
 
-        view_matrix = camera.update_view_matrix()
-        p.getCameraImage(1920, 1080, viewMatrix=view_matrix)
-        # Disconnect when done
+        # TODO: Camera causes lag, because it takes photos too often, maybe don't use?
+
+        # view_matrix = camera.update_sensor()
+        # p.getCameraImage(1920, 1080, viewMatrix=view_matrix)
     sim.disconnect()

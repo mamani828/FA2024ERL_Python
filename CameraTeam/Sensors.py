@@ -20,10 +20,16 @@ class Sensor(ABC):
     """
     @abstractmethod
     def __init__(self):
+        """
+        Every sensor class must have initializing method.
+        """
         pass
 
     @abstractmethod
     def setup(self):
+        """
+        Every sensor class must have a setup method.
+        """
         pass
 
     @abstractmethod
@@ -98,41 +104,58 @@ class Lidar:
     """
     Light radar class. Uses Pybullet's rayTestBatch.
     """
-    def __init__(self, target_robot, config) -> None:
-        self.target_robot = target_robot
-
-        self.LIDAR_JOINTS = config['lidar_joints']
-        self.START_ANGLE = config['lidar_angle1']
-        self.END_ANGLE = config['lidar_angle2']
-        self.NUM_RAYS = config['num_rays']
-        self.RAY_START_LEN = config['ray_start_len']
-        self.RAY_LEN = config['ray_len']
-        self.HIT_COLOR = config['hit_color']
-        self.MISS_COLOR = config['miss_color']
-
-    def setup(self) -> None:
+    def __init__(self, target_robot: object, config: dict) -> None:
         """
-        Setups Lidar object (a one-time setup).
+        Initializes the Lidar class by setting variables.
 
         Args:
-            None.
+            target_robot(object): PyBullet Robot.
+            config(dict):
+                lidar_joints: Integer joint of the robot
+                hit_color: RGB when ray hits an object
+                miss_color: RGB when ray does not hit an object
+                num_rays: Integer number of rays
+                lidar_angle1: Integer starting angle
+                lidar_angle2: Integer ending angle
+                ray_start_len: Integer ray starting length
+                ray_len: Integer ray length
         Returns:
             None.
         Raises:
             None.
         """
-        a = self.START_ANGLE*(math.pi/180)
-        b = (self.END_ANGLE - self.START_ANGLE)*(math.pi/180)
+        #  Constants
+        self.LIDAR_JOINTS = config['lidar_joints']
+        self.HIT_COLOR = config['hit_color']
+        self.MISS_COLOR = config['miss_color']
+
+        #  Default from config, GUI overrides
+        self.num_rays = config['num_rays']
+        self.start_angle = config['lidar_angle1']
+        self.end_angle = config['lidar_angle2']
+        self.start_len = config['ray_start_len']
+        self.ray_len = config['ray_len']
+
+
+        self.target_robot = target_robot
+        self.car_id = target_robot.robot_id
+
+    def setup(self):
+        """
+        Default setup for when lidar object is just built
+        """
+        a = self.start_angle*(math.pi/180)
+        b = (self.end_angle - self.start_angle)*(math.pi/180)
 
         ray_from, ray_to = [], []
-        for i in range(self.NUM_RAYS):
-            theta = float(a) + (float(b) * (float(i)/self.NUM_RAYS))
-            x1 = self.RAY_START_LEN*math.sin(theta)
-            y1 = self.RAY_START_LEN*math.cos(theta)
+        for i in range(self.num_rays):
+            theta = float(a) + (float(b) * (float(i)/self.num_rays))
+            x1 = self.start_len*math.sin(theta)
+            y1 = self.start_len*math.cos(theta)
             z1 = 0
 
-            x2 = self.RAY_LEN*math.sin(theta)
-            y2 = self.RAY_LEN*math.cos(theta)
+            x2 = self.ray_len*math.sin(theta)
+            y2 = self.ray_len*math.cos(theta)
             z2 = 0
 
             ray_from.append([x1, y1, z1])
@@ -142,7 +165,7 @@ class Lidar:
         self.ray_to = ray_to
 
         ray_ids = []
-        for i in range(self.NUM_RAYS):
+        for i in range(self.num_rays):
             ray_ids.append(
                     p.addUserDebugLine(
                             self.ray_from[i],
@@ -156,7 +179,7 @@ class Lidar:
 
     def retrieve_data(self, common=True, robot_state=None) -> tuple:
         """
-        In most mobile robot applicatoins, each ray (or lidar)
+        In most mobile robot applications, each ray (or lidar)
         gives two information: 1. range, 2. bearing (w.r.t car's
         yaw). Range is how far the ray reached - if it hits something
         than it should be less than it's max length. Bearing tells
@@ -224,3 +247,24 @@ class Lidar:
         # set coord to None for rays with no hit.
         coords[no_hit] = None  # Set coord to None for rays with not hit.
         return rays_data, dists, coords
+
+    def gui_change_parameter(self, **kwargs) -> None:
+        """
+        Changes the parameters in Lidar class through the GUI. This will
+        affect the next call to setup as the values have changed.
+
+        Args:
+            kwargs(dict): Variables to be changed.
+        Returns:
+            None.
+        Raises:
+            None.
+        """
+        allowed_keys = {"num_rays", "start_angle", "end_angle", "start_len",
+                        "ray_len"}
+        
+        self.__dict__.update((k, v) for k, v in kwargs.items() if k in allowed_keys)
+
+        for k in kwargs.keys():
+            if k not in allowed_keys:
+                print("{} is not allowed to be updated".format(repr(k)))
