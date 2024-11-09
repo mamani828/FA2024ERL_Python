@@ -1,3 +1,12 @@
 Log October 22:
     - Started adding some buttons to the cylinder pybullet, and able to control the velocity with a slider
     - Aiming to finish making a p2p program and PIDS in pybullet
+Log November 8th:
+    - Made a new more detailed plan
+    - removed the pyqt stuff
+    - made a req.txt
+    For setup to get done by next week:
+        - Get the CylPybulletnopyqt.py running
+        - Get the PID working
+        - Find an alternative to pyqt for logging(maybe even in a text file for time being)
+        - Change the Cylinder to a robot and possibly add a pid for heading and slider for angular velocity
