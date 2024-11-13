@@ -7,8 +7,8 @@ import time
 import cv2
 sys.path.append(os.getcwd()+"/util")
 # from util import QtGui
-from QtGui import Widget 
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QWidget
+
 
     
 
@@ -26,7 +26,7 @@ class PybulletEnviorement():
         
         # initializing the better pyqt gui
         self.app = QApplication(sys.argv)
-        self.ControlPanel= Widget()
+        self.ControlPanel= QWidget()
         self.ControlPanel.show()
         
     
