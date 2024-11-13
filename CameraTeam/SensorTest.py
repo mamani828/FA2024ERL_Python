@@ -52,7 +52,7 @@ class Robot:
         racecar_orientation = [0, 0, 0]  # Neutral orientation (Euler Angles)
         initial_racecar_orientation = p.getQuaternionFromEuler(racecar_orientation)  # Quaternions
         racecar = p.loadURDF("racecar/racecar.urdf", racecar_coordinates,
-                             initial_racecar_orientation, useFixedBase=True)
+                             initial_racecar_orientation, useFixedBase=False)
         self.robot_id = racecar  # Set robot_id to id returned by loadURDF
 
 
@@ -94,7 +94,7 @@ if __name__ == "__main__":
 
     for _ in range(100000):
         p.stepSimulation()
-        time.sleep(1 / 240)  # Slow down the simulation to real time
+        time.sleep(1 / 240) # Slow down the simulation to real time
 
         # TODO: Camera causes lag, because it takes photos too often, maybe don't use?
 
