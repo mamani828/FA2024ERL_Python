@@ -4,7 +4,6 @@ import numpy as np
 import pybullet as p
 import pybullet_data
 import time
-import cv2
 sys.path.append(os.getcwd()+"/util")
 # from util import QtGui
 from PyQt5.QtWidgets import QApplication, QWidget

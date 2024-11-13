@@ -4,6 +4,7 @@ import time
 
 class PybulletEnviorement:
     def __init__(self):
+        self.Output= open("Outputfile.txt","w")
         self.physics_client = p.connect(p.GUI)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setGravity(0, 0, -9.81)
@@ -28,7 +29,16 @@ class PybulletEnviorement:
         
         
         
-        
+    def update_info_text(self):
+        p.addUserDebugText(
+            text=f"velocities: {self.x_vel, self.y_vel}",
+            textPosition=[0, 0, 3],
+            textColorRGB=[1, 1, 1],
+            textSize=1.5,
+            replaceItemUniqueId=self.info_text_id
+        )
+        self.Output.write(str(self.Cylinder.position) + "\n")
+        self.Output.flush()
     def run_simulation(self):
         while True:
             p.stepSimulation()
@@ -40,20 +50,14 @@ class PybulletEnviorement:
                 self.x_goalpos=p.readUserDebugParameter(self.params['X_goalpos'])
                 self.y_goalpos=p.readUserDebugParameter(self.params['Y_goalpos'])
                 self.Cylinder.setVelocity(self.x_vel,self.y_vel)
+                self.update_info_text()
             except:
                 continue
             self.Cylinder.setVelocity(self.x_vel,self.y_vel)
+        
     
-    def update_info_text(self):
-            p.addUserDebugText(
-                text=f"velocities: {self.x_vel, self.y_vel}",
-                textPosition=[0, 0, 3],
-                textColorRGB=[1, 1, 1],
-                textSize=1.5,
-                replaceItemUniqueId=self.info_text_id
-            )
-                
-            print(self.Cylinder.position)
+    
+            
     
 
             
@@ -106,6 +110,7 @@ if __name__ == "__main__":
     try:
         env.run_simulation()
     except KeyboardInterrupt:
+        
         p.disconnect()
         print("Simulation stopped by user.")
         
