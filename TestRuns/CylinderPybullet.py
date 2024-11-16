@@ -4,6 +4,8 @@ import numpy as np
 import pybullet as p
 import pybullet_data
 import time
+import matplotlib.pyplot as plt
+from scipy.integrate import odeint
 sys.path.append(os.getcwd()+"/util")
 # from util import QtGui
 from PyQt5.QtWidgets import QApplication, QWidget
