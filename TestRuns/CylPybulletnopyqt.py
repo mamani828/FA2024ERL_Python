@@ -17,6 +17,9 @@ class PybulletEnvironment:
         self.physics_client = p.connect(p.GUI)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setGravity(0, 0, -9.81)
+        #p.changeDynamics(
+        #    lateralFriction=2
+        #)
         self.plane_id = p.loadURDF("plane.urdf")
         
         # choose which to use by setting self.Cylinder to Cylinder() or Robot()
@@ -149,7 +152,8 @@ class Robot:
                 bodyIndex=self.robot_id,
                 jointIndex=wheel,
                 controlMode=p.VELOCITY_CONTROL,
-                targetVelocity=forward_speed
+                targetVelocity=forward_speed,
+                force = 0.5
             )
 
         logging.info(f"Set racecar velocity: Forward={forward_speed}, Steering={steering_angle}")
