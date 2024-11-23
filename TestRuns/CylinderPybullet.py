@@ -89,10 +89,19 @@ class Cylinder:
     def getPosition(self):
         return p.getBasePositionAndOrientation(self.cylinder_id)[0]
     
+    def cache(self,input, current):
+        tolerance=0.1
+        current=0.0
+        if(tolerance<=abs(input-current)):
+            return False
+        return True
+    
     def updatePosition(self):
         self.position=self.getPosition()
         
+        
     def setVelocity(self,x,y):
+        shouldUpdate=cache(self.x,p.getBaseVelocity(self.cylinder_id)[0])
         p.resetBaseVelocity(self.cylinder_id, [x, y, 0]) # ignoring setting heading since its a cylinder so heading doesnt matter
     
     

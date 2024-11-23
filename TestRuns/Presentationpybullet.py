@@ -39,6 +39,8 @@ class PybulletEnviorement:
         )
         self.Output.write(str(self.Cylinder.position) + "\n")
         self.Output.flush()
+        
+        
     def run_simulation(self):
         while True:
             p.stepSimulation()
@@ -50,10 +52,10 @@ class PybulletEnviorement:
                 self.x_goalpos=p.readUserDebugParameter(self.params['X_goalpos'])
                 self.y_goalpos=p.readUserDebugParameter(self.params['Y_goalpos'])
                 self.Cylinder.setVelocity(self.x_vel,self.y_vel)
-                self.update_info_text()
+                # self.update_info_text()
             except:
                 continue
-            self.Cylinder.setVelocity(self.x_vel,self.y_vel)
+            # self.Cylinder.setVelocity(self.x_vel,self.y_vel)
         
     
     
@@ -69,7 +71,11 @@ class Cylinder:
         cylinder_height=2
         self.cylinder_id=p.loadURDF("cylinder.urdf",basePosition=[0, 0, cylinder_height / 2])
         self.position=self.getPosition()
+        
     def getPosition(self):
+        return p.getBasePositionAndOrientation(self.cylinder_id)[0]
+    
+    def getVelocity(self):
         return p.getBasePositionAndOrientation(self.cylinder_id)[0]
     
     def updatePosition(self):
