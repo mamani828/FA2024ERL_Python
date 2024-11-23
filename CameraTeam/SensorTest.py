@@ -43,7 +43,7 @@ class PybulletEnvironment:
 
 class Robot:
     def __init__(self):
-        self.robot_id = None
+        self.robot_id = 1
         self.loading_robot()
 
     def loading_robot(self):
@@ -96,7 +96,8 @@ if __name__ == "__main__":
         p.stepSimulation()
         time.sleep(1 / 240) # Slow down the simulation to real time
 
-        # TODO: Camera causes lag, because it takes photos too often, maybe don't use?
+        ray_data, _, _ = lidar.retrieve_data()
+        lidar.simulate(ray_data)
 
         # view_matrix = camera.update_sensor()
         # p.getCameraImage(1920, 1080, viewMatrix=view_matrix)

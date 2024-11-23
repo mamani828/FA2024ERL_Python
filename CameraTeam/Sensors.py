@@ -198,12 +198,12 @@ class Lidar:
                        for consistency of the API.
             common: For API consistency, same as `robot_state`.
         Returns:
-            rays_data: A numpy array needed to simulate LiDAR.
+            rays_data: A numpy array needed to simulate LIDAR.
             coords: Coordinate (x, y) of hit points in world
                     coordinate. For a ray that does not hit an object,
                     the value is None.
             dists: Distance to hit object for every ray. For a ray that
-                   does not hit an object, the value is self.RAY_LEN
+                   does not hit an object, the value is self.ray_len
 
         """
         num_threads = 0
@@ -222,18 +222,19 @@ class Lidar:
         no_hit = np.where(rays_data[:, 2] == 1.)[0]
 
         # Convert `coords` to numpy array to leverage Numpy's speed.
-        # `coords` will be of shape (NUM_RAYS, 3) and coords[i] contains
+        # `coords` will be of shape (num_rays, 3) and coords[i] contains
         # [x, y, z] coordinates in world coordinate, for each rays.
-        coords = np.array(rays_data[:, 3], dtype=object)  # shape: (NUM_RAYS, )
-        coords = np.stack(coords).astype(np.float32)      # shape: (NUM_RAYS, 3)
+        coords = np.array(rays_data[:, 3], dtype=object)  # shape: (num_rays, )
+        coords = np.stack(coords).astype(np.float32)      # shape: (num_rays, 3)
         coords = coords[:, :2]  # We only need (x, y) coords.
 
         # Get the distances
-        x, y, yaw = robot_state
-        dists = np.sqrt((coords[:, 0] - x)**2 + (coords[:, 1] - y)**2)  # (NUM_RAYS, )
-
-        # Set distances to self.RAY_LEN for rays that doesn't hit an object.
-        dists[no_hit] = self.RAY_LEN
+        robot_pos, robot_orn = p.getBasePositionAndOrientation(self.target_robot.robot_id)
+        x, y = robot_pos[0:2]
+        yaw = robot_orn[2]
+        dists = np.sqrt((coords[:, 0] - x)**2 + (coords[:, 1] - y)**2)  # (num_rays, )
+        # Set distances to self.ray_len for rays that doesn't hit an object.
+        dists[no_hit] = self.ray_len
 
         # Get bearing data
         angle = np.arctan2(coords[:, 1] - y, coords[:, 0] - x)
@@ -247,6 +248,52 @@ class Lidar:
         # set coord to None for rays with no hit.
         coords[no_hit] = None  # Set coord to None for rays with not hit.
         return rays_data, dists, coords
+
+    def simulate(self, rays_data: np.ndarray) -> None:
+        """
+        Simulate the rays from lidar. User should
+        not call this function when running/testing
+        algorithm to save compute power, but good 
+        to use for visualization and debugging.
+
+        This method will be called iff 
+        the `SIMULATE_LIDAR` boolean is set
+        to True and LIDAR fps is satisfied (see `main.py`).
+
+        Args:
+            rays_data: TODO (refer p.rayTestBatch return values)
+        Returns:
+        Raises:
+        """
+
+        for i in range (self.num_rays):
+            hit_object_id = rays_data[i][0]
+            hit_fraction  = rays_data[i][2]
+            hit_position  = rays_data[i][3]
+
+            if (hit_fraction==1.):
+                # No object hit.
+                p.addUserDebugLine(
+                            self.ray_from[i], 
+                            self.ray_to[i], 
+                            self.MISS_COLOR, 
+                            replaceItemUniqueId=self.ray_ids[i], 
+                            parentObjectUniqueId=self.car_id, 
+                            parentLinkIndex=self.LIDAR_JOINTS
+                        )
+            else:
+                # Object hit.
+                localHitTo = [self.ray_from[i][0]+hit_fraction*(self.ray_to[i][0]-self.ray_from[i][0]), \
+                              self.ray_from[i][1]+hit_fraction*(self.ray_to[i][1]-self.ray_from[i][1]), \
+                              self.ray_from[i][2]+hit_fraction*(self.ray_to[i][2]-self.ray_from[i][2])]
+                p.addUserDebugLine(
+                            self.ray_from[i], 
+                            localHitTo,
+                            self.HIT_COLOR, 
+                            replaceItemUniqueId=self.ray_ids[i], 
+                            parentObjectUniqueId=self.car_id, 
+                            parentLinkIndex=self.LIDAR_JOINTS
+                        )
 
     def gui_change_parameter(self, **kwargs) -> None:
         """
