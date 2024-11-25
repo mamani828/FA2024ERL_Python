@@ -125,7 +125,7 @@ class Lidar:
             None.
         """
         #  Constants
-        self.LIDAR_JOINTS = config['lidar_joints']
+        self.LIDAR_JOINTS = 8
         self.HIT_COLOR = config['hit_color']
         self.MISS_COLOR = config['miss_color']
 
