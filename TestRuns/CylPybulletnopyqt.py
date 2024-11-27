@@ -2,7 +2,7 @@ import pybullet as p
 import pybullet_data
 import logging
 import time
-
+import numpy as np
 # Configure logging
 logging.basicConfig(
     filename="simulation.log",
@@ -21,7 +21,7 @@ class PybulletEnvironment:
         #    lateralFriction=2
         #)
         self.plane_id = p.loadURDF("plane.urdf")
-        
+
         # choose which to use by setting self.Cylinder to Cylinder() or Robot()
         # self.Cylinder = Cylinder()
         
@@ -35,19 +35,24 @@ class PybulletEnvironment:
         self.x_goalpos = p.addUserDebugParameter("X Goal Position", -100, 100, 0)
         self.y_goalpos = p.addUserDebugParameter("Y Goal Position", -100, 100, 0)
 
+
         # PID constant sliders
         self.kp_slider = p.addUserDebugParameter("KP", 0, 10, 1)
         self.ki_slider = p.addUserDebugParameter("KI", 0, 1, 0.01)
         self.kd_slider = p.addUserDebugParameter("KD", 0, 1, 0.1)
 
-
-    def run_simulation(self):
+    def getOrientation (self, robot=None):
+        pass
+    def run_simulation(self, boolean = True):
         logging.info("Starting simulation...")
+        print(boolean)
+
+        if boolean:
+            cube = create_new_cube()
         try:
             while True:
                 p.stepSimulation()
                 time.sleep(1.0 / 240.0)
-
                 # Update PID constants from sliders
                 kp = p.readUserDebugParameter(self.kp_slider)
                 ki = p.readUserDebugParameter(self.ki_slider)
@@ -67,9 +72,14 @@ class PybulletEnvironment:
                 # Use PID to calculate velocities
                 x_velocity = self.x_pid.calculateVelocity(x_error)
                 y_velocity = self.y_pid.calculateVelocity(y_error)
+                target_yaw = np.arctan2(y_error, x_error)
+                x_yaw = self.Cylinder.getHeading()
 
+                robot_x_angle = 0
+
+                steering_angle = np.arctan2(np.sin(target_yaw - x_yaw), np.cos(target_yaw - x_yaw))
                 # Apply the velocities
-                self.Cylinder.setVelocity(x_velocity, y_velocity)
+                self.Cylinder.setVelocity(x_velocity,steering_angle)
 
                 # Update debug text
                 # self.update_info_text(x_velocity, y_velocity, current_position)
@@ -115,6 +125,8 @@ class Cylinder:
     def setVelocity(self, x, y):
         p.resetBaseVelocity(self.cylinder_id, [x, y, 0])
         logging.info(f"Set cylinder velocity: X={x}, Y={y}")
+
+
         
 class Robot:
     def __init__(self):
@@ -135,7 +147,7 @@ class Robot:
         euler_angles = p.getEulerFromQuaternion(orientation)
         return euler_angles[2]  # Yaw angle
 
-    def setVelocity(self, forward_speed, steering_angle):
+    def setVelocity(self, forward_speed_x, steering_angle):
 
         # Set the steering angle for front wheels
         for steering_link in self.steering_links:
@@ -152,11 +164,11 @@ class Robot:
                 bodyIndex=self.robot_id,
                 jointIndex=wheel,
                 controlMode=p.VELOCITY_CONTROL,
-                targetVelocity=forward_speed,
+                targetVelocity=forward_speed_x,
                 force = 0.5
             )
 
-        logging.info(f"Set racecar velocity: Forward={forward_speed}, Steering={steering_angle}")
+        logging.info(f"Set racecar velocity: Forward={forward_speed_x}, Steering={steering_angle}")
 
 
 class PID:
@@ -186,7 +198,17 @@ class PID:
         self.previous_error = error
         return output
 
-
+def create_new_cube():
+    cube_size = 0.3
+    x = 10
+    y = 10
+    position = [x, y, cube_size/2]
+    orientation = p.getQuaternionFromEuler([0, 0, 0])
+    color = list(np.random.uniform(0, 1, 3)) + [1]  # Random RGB + Alpha
+    visual_shape = p.createVisualShape(shapeType=p.GEOM_BOX, halfExtents=[cube_size/2]*3, rgbaColor=color)
+    collision_shape = p.createCollisionShape(shapeType=p.GEOM_BOX, halfExtents=[cube_size/2]*3)
+    boxId = p.createMultiBody(baseMass=1, baseVisualShapeIndex=visual_shape, baseCollisionShapeIndex=collision_shape, basePosition=position, baseOrientation=orientation)
+    return boxId
 if __name__ == "__main__":
     env = PybulletEnvironment()
     try:
