@@ -46,7 +46,6 @@ class PybulletEnvironment:
     def run_simulation(self, boolean = True):
         logging.info("Starting simulation...")
         print(boolean)
-        self.find_joints(self.jackal_robot)
         try:
             while True:
                 p.stepSimulation()
@@ -54,20 +53,20 @@ class PybulletEnvironment:
                 # Update PID constants from sliders
 
                 # Get current position and goal
-                current_position = self.Cylinder.getPosition()
-                x_goal = p.readUserDebugParameter(self.x_goalpos)
-                y_goal = p.readUserDebugParameter(self.y_goalpos)
+                # current_position = self.Cylinder.getPosition()
+                # x_goal = p.readUserDebugParameter(self.x_goalpos)
+                # y_goal = p.readUserDebugParameter(self.y_goalpos)
 
-                # Calculate error
-                x_error = x_goal - current_position[0]
-                y_error = y_goal - current_position[1]
+                # # Calculate error
+                # x_error = x_goal - current_position[0]
+                # y_error = y_goal - current_position[1]
 
-                # Use PID to calculate velocities
-                x_velocity = self.x_pid.calculateVelocity(x_error)
-                y_velocity = self.y_pid.calculateVelocity(y_error)
-                target_yaw = np.arctan2(y_error, x_error)
-                x_yaw = self.Cylinder.getHeading()
-
+                # # Use PID to calculate velocities
+                # x_velocity = self.x_pid.calculateVelocity(x_error)
+                # y_velocity = self.y_pid.calculateVelocity(y_error)
+                # target_yaw = np.arctan2(y_error, x_error)
+                # x_yaw = self.Cylinder.getHeading()
+                self.jackal_robot.setVelocity()
                 # Update debug text
                 # self.update_info_text(x_velocity, y_velocity, current_position)
 
@@ -112,7 +111,16 @@ class Robot:
         return euler_angles[2]  # Yaw angle
     def getRobotId(self):
         return self.robot_id
-    
+    def setVelocity(self):
+
+            for wheel in self.wheels:
+                p.setJointMotorControl2(
+                    bodyIndex=self.robot_id,
+                    jointIndex=wheel,
+                    controlMode=p.VELOCITY_CONTROL,
+                    targetVelocity=100.0,
+                    force = 9.81
+                )
     
     
     
