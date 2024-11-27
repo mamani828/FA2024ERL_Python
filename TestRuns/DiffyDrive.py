@@ -25,7 +25,7 @@ class PybulletEnvironment:
         # choose which to use by setting self.Cylinder to Cylinder() or Robot()
         # self.Cylinder = Cylinder()
         
-        self.Cylinder = Robot()
+        self.jackal_robot = Robot()
 
         # PID controllers
         self.x_pid = PID(kp=1.0, ki=0.01, kd=0.1)
@@ -40,25 +40,18 @@ class PybulletEnvironment:
         self.kp_slider = p.addUserDebugParameter("KP", 0, 10, 1)
         self.ki_slider = p.addUserDebugParameter("KI", 0, 1, 0.01)
         self.kd_slider = p.addUserDebugParameter("KD", 0, 1, 0.1)
-
+    
     def getOrientation (self, robot=None):
         pass
     def run_simulation(self, boolean = True):
         logging.info("Starting simulation...")
         print(boolean)
-
-        if boolean:
-            cube = create_new_cube()
+        self.find_joints(self.jackal_robot)
         try:
             while True:
                 p.stepSimulation()
                 time.sleep(1.0 / 240.0)
                 # Update PID constants from sliders
-                kp = p.readUserDebugParameter(self.kp_slider)
-                ki = p.readUserDebugParameter(self.ki_slider)
-                kd = p.readUserDebugParameter(self.kd_slider)
-                self.x_pid.update(kp, ki, kd)
-                self.y_pid.update(kp, ki, kd)
 
                 # Get current position and goal
                 current_position = self.Cylinder.getPosition()
@@ -75,18 +68,8 @@ class PybulletEnvironment:
                 target_yaw = np.arctan2(y_error, x_error)
                 x_yaw = self.Cylinder.getHeading()
 
-                robot_x_angle = 0
-
-                steering_angle = np.arctan2(np.sin(target_yaw - x_yaw), np.cos(target_yaw - x_yaw))
-                # Apply the velocities
-                self.Cylinder.setVelocity(x_velocity,steering_angle)
-
                 # Update debug text
                 # self.update_info_text(x_velocity, y_velocity, current_position)
-
-                # Log details
-                logging.info(f"Position: {current_position}, Errors: X={x_error}, Y={y_error}, "
-                             f"Velocities: X={x_velocity}, Y={y_velocity}, PID: KP={kp}, KI={ki}, KD={kd}")
 
         except KeyboardInterrupt:
             logging.warning("Simulation stopped by user.")
@@ -109,33 +92,14 @@ class PybulletEnvironment:
             replaceItemUniqueId=self.info_text_id
         )
 
-
-class Cylinder:
-    def __init__(self):
-        cylinder_height = 2
-        self.cylinder_id = p.loadURDF("cylinder.urdf", basePosition=[0, 0, cylinder_height / 2])
-        self.position = self.getPosition()
-
-    def getPosition(self):
-        return p.getBasePositionAndOrientation(self.cylinder_id)[0]
-
-    def updatePosition(self):
-        self.position = self.getPosition()
-
-    def setVelocity(self, x, y):
-        p.resetBaseVelocity(self.cylinder_id, [x, y, 0])
-        logging.info(f"Set cylinder velocity: X={x}, Y={y}")
-
-
         
 class Robot:
     def __init__(self):
-        self.robot_id = p.loadURDF("./racecar.urdf", basePosition=[0, 0, 0.2])
+        self.robot_id = p.loadURDF("./jackal.urdf", basePosition=[0, 0, 0.2])
+        
+        
         self.position = self.getPosition()
-
-        # Retrieve wheel and steering joint indices
-        self.steering_links = [4, 6]  # Front left and front right steering links
-        self.wheels = [2, 3, 5, 7]   # All four wheels
+        self.wheels = [1,2,3,4]   # All four wheels
 
     def getPosition(self):
  
@@ -146,29 +110,13 @@ class Robot:
         orientation = p.getBasePositionAndOrientation(self.robot_id)[1]
         euler_angles = p.getEulerFromQuaternion(orientation)
         return euler_angles[2]  # Yaw angle
+    def getRobotId(self):
+        return self.robot_id
+    
+    
+    
+    
 
-    def setVelocity(self, forward_speed_x, steering_angle):
-
-        # Set the steering angle for front wheels
-        for steering_link in self.steering_links:
-            p.setJointMotorControl2(
-                bodyIndex=self.robot_id,
-                jointIndex=steering_link,
-                controlMode=p.POSITION_CONTROL,
-                targetPosition=steering_angle
-            )
-
-        # Set the wheel velocities
-        for wheel in self.wheels:
-            p.setJointMotorControl2(
-                bodyIndex=self.robot_id,
-                jointIndex=wheel,
-                controlMode=p.VELOCITY_CONTROL,
-                targetVelocity=forward_speed_x,
-                force = 0.5
-            )
-
-        logging.info(f"Set racecar velocity: Forward={forward_speed_x}, Steering={steering_angle}")
 
 
 class PID:
@@ -198,17 +146,6 @@ class PID:
         self.previous_error = error
         return output
 
-def create_new_cube():
-    cube_size = 0.3
-    x = 10
-    y = 10
-    position = [x, y, cube_size/2]
-    orientation = p.getQuaternionFromEuler([0, 0, 0])
-    color = list(np.random.uniform(0, 1, 3)) + [1]  # Random RGB + Alpha
-    visual_shape = p.createVisualShape(shapeType=p.GEOM_BOX, halfExtents=[cube_size/2]*3, rgbaColor=color)
-    collision_shape = p.createCollisionShape(shapeType=p.GEOM_BOX, halfExtents=[cube_size/2]*3)
-    boxId = p.createMultiBody(baseMass=1, baseVisualShapeIndex=visual_shape, baseCollisionShapeIndex=collision_shape, basePosition=position, baseOrientation=orientation)
-    return boxId
 if __name__ == "__main__":
     env = PybulletEnvironment()
     try:
