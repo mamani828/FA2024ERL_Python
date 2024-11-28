@@ -5,6 +5,9 @@ import numpy as np
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLabel
 from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QPixmap, QImage
+from PyQt5 import QtWidgets
+from PyQt5.QtWidgets import QSlider
+from PyQt5.QtCore import Qt
 from Sensors import Camera, Lidar  # Assuming your classes are saved in sensor_code.py
 from SensorTest import Robot
 
@@ -12,6 +15,7 @@ class SimulationApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.initUI()
+        self.sliderUI()
         self.simulation_running = False
 
         # Initialize PyBullet simulation
@@ -46,12 +50,12 @@ class SimulationApp(QMainWindow):
         self.setWindowTitle("PyBullet + PyQt5 Simulation")
         self.setGeometry(100, 100, 800, 600)
 
-        # Main layout
+        # Main layout of the GUI
         central_widget = QWidget(self)
         self.setCentralWidget(central_widget)
         layout = QVBoxLayout(central_widget)
 
-        # Start/Stop button
+        # UI elements of the Start/Stop button
         self.toggle_button = QPushButton("Start Simulation", self)
         self.toggle_button.clicked.connect(self.toggle_simulation)
         layout.addWidget(self.toggle_button)
@@ -61,7 +65,43 @@ class SimulationApp(QMainWindow):
         self.visualization_label.setText("Simulation Visualization")
         self.visualization_label.setFixedSize(640, 480)
         layout.addWidget(self.visualization_label)
+        
+        # UI elements of the Slider button
 
+    def sliderUI(self):
+        #Slider setup
+        self.slider = QtWidgets.QSlider(Qt.Horizontal, self)
+        self.slider.setMinimum(0)
+        self.slider.setMaximum(50) # Allows users to slide between 0 Lidar rays to 50
+        self.slider.setValue(0) # Intializing Lidar to have 20 rays 
+        self.slider.setTickPosition(QSlider.TicksBelow)
+        self.slider.setTickInterval(2)
+        self.slider.valueChanged.connect(self.on_slide) # Connects to a slot to handle slider
+
+        # Adding the sldier to the layout 
+        central_widget = self.centralWidget()
+        layout = central_widget.layout()
+        layout.addWidget(self.slider) 
+    
+    def on_slide(self,value):
+        if value > 0:
+            print(f"Slider value {value}") # For debugging slider
+            if value != self.lidar.num_rays: #only updating if the value has changed 
+                for ray_id in self.lidar.ray_ids:
+                    p.removeUserDebugItem(ray_id)
+                self.lidar.ray_ids.clear() # Clear the ray_ids list 
+
+                #Updating the lidar and reconfiguring with new num_rays(updating the list)
+                self.lidar.num_rays = value 
+                self.lidar.setup() # Reconfiguring the lidar to apply the new num_rays value 
+        else:
+            print("No Lidar Rays")
+            # Remove Every single ray if the slider value is 0
+            for ray_id in self.lidar.ray_ids:
+                p.removeUserDebugItem(ray_id)
+            self.lidar.ray_ids.clear()
+
+    
     def toggle_simulation(self):
         if self.simulation_running:
             self.timer.stop()

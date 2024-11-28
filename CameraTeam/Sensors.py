@@ -312,6 +312,13 @@ class Lidar:
         
         self.__dict__.update((k, v) for k, v in kwargs.items() if k in allowed_keys)
 
+        # Removing existing rays in the Pybullet GUI
+        for ray_id in self.ray_ids:
+            p.removeUserDebugItem(ray_id)
+        
+        # Reintialize the rays
+        self.setup()
+
         for k in kwargs.keys():
             if k not in allowed_keys:
                 print("{} is not allowed to be updated".format(repr(k)))
