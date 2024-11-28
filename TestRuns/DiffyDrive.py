@@ -17,9 +17,6 @@ class PybulletEnvironment:
         self.physics_client = p.connect(p.GUI)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setGravity(0, 0, -9.81)
-        #p.changeDynamics(
-        #    lateralFriction=2
-        #)
         self.plane_id = p.loadURDF("plane.urdf")
 
         # choose which to use by setting self.Cylinder to Cylinder() or Robot()
@@ -27,19 +24,10 @@ class PybulletEnvironment:
         
         self.jackal_robot = Robot()
 
-        # PID controllers
-        self.x_pid = PID(kp=1.0, ki=0.01, kd=0.1)
-        self.y_pid = PID(kp=1.0, ki=0.01, kd=0.1)
+        # Velocity position sliders
+        self.v_forward_slider = p.addUserDebugParameter("Linear Velocity", -50, 50, 0)
+        self.v_angular_slider = p.addUserDebugParameter("Angular Velocity", -200, 200, 0)
 
-        # Goal position sliders
-        self.x_goalpos = p.addUserDebugParameter("X Goal Position", -100, 100, 0)
-        self.y_goalpos = p.addUserDebugParameter("Y Goal Position", -100, 100, 0)
-
-
-        # PID constant sliders
-        self.kp_slider = p.addUserDebugParameter("KP", 0, 10, 1)
-        self.ki_slider = p.addUserDebugParameter("KI", 0, 1, 0.01)
-        self.kd_slider = p.addUserDebugParameter("KD", 0, 1, 0.1)
     
     def getOrientation (self, robot=None):
         pass
@@ -50,25 +38,12 @@ class PybulletEnvironment:
             while True:
                 p.stepSimulation()
                 time.sleep(1.0 / 240.0)
-                # Update PID constants from sliders
-
-                # Get current position and goal
-                # current_position = self.Cylinder.getPosition()
-                # x_goal = p.readUserDebugParameter(self.x_goalpos)
-                # y_goal = p.readUserDebugParameter(self.y_goalpos)
-
-                # # Calculate error
-                # x_error = x_goal - current_position[0]
-                # y_error = y_goal - current_position[1]
-
-                # # Use PID to calculate velocities
-                # x_velocity = self.x_pid.calculateVelocity(x_error)
-                # y_velocity = self.y_pid.calculateVelocity(y_error)
-                # target_yaw = np.arctan2(y_error, x_error)
-                # x_yaw = self.Cylinder.getHeading()
+                self.v_forward = p.readUserDebugParameter(self.v_forward_slider)
+                self.v_angular = p.readUserDebugParameter(self.v_angular_slider)
+                
+                self.jackal_robot.inverse_kinematics(self.v_forward,self.v_angular)
                 self.jackal_robot.setVelocity()
-                # Update debug text
-                # self.update_info_text(x_velocity, y_velocity, current_position)
+                
 
         except KeyboardInterrupt:
             logging.warning("Simulation stopped by user.")
@@ -99,6 +74,17 @@ class Robot:
         
         self.position = self.getPosition()
         self.wheels = [1,2,3,4]   # All four wheels
+        self.wheels_left=[1,3]
+        self.wheels_right=[2,4]
+        self.track_radius=0.187795 
+        self.vl=0
+        self.vr=0
+        """
+        Wheel Index 1: Front Left
+        Wheel Index 2: Front Right
+        Wheel Index 3: Back Left
+        Wheel Index 4: Back Right
+        """
 
     def getPosition(self):
  
@@ -113,14 +99,30 @@ class Robot:
         return self.robot_id
     def setVelocity(self):
 
-            for wheel in self.wheels:
+            for wheel in self.wheels_left:
                 p.setJointMotorControl2(
                     bodyIndex=self.robot_id,
                     jointIndex=wheel,
                     controlMode=p.VELOCITY_CONTROL,
-                    targetVelocity=100.0,
-                    force = 9.81
+                    targetVelocity=self.vl,
+                    force = 32 # i think the torque on a jackal
                 )
+            for wheel in self.wheels_right:
+                p.setJointMotorControl2(
+                    bodyIndex=self.robot_id,
+                    jointIndex=wheel,
+                    controlMode=p.VELOCITY_CONTROL,
+                    targetVelocity=self.vr,
+                    force = 32 # i think the torque on a jackal
+                )
+    def inverse_kinematics(self,v_f, v0): # converting forward+angular velocity into wheel velocities
+        self.vr=v_f+self.track_radius*v0        # velocity of left wheels
+        self.vl=v_f-self.track_radius*v0       # velocity of right wheels 
+        
+        
+    """ wheel velocity: [wheel front left, wheel front right, wheel back left, wheel back right]"""
+    # def forward_kinematics(self,wheel_vels): # converting wheel velocities into forward+angular velocity 
+        
     
     
     
