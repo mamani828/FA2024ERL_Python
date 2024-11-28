@@ -90,15 +90,31 @@ if __name__ == "__main__":
     camera = Camera(robot, camera_config)
 
     lidar_config = open_yaml("lidar_configs")
-    lidar = Lidar(robot, lidar_config).setup()
+    lidar = Lidar(robot, lidar_config)
+    lidar.setup()
 
-    for _ in range(100000):
-        p.stepSimulation()
-        time.sleep(1 / 240) # Slow down the simulation to real time
+    camera_update_interval = 2400  # Number of steps for camera updates (10 seconds at 240 steps/second)
+    camera_counter = 0  # Separate counter for camera updates
 
-        ray_data, _, _ = lidar.retrieve_data()
-        lidar.simulate(ray_data)
+    try:
+        while True:
+            p.stepSimulation()
 
-        # view_matrix = camera.update_sensor()
-        # p.getCameraImage(1920, 1080, viewMatrix=view_matrix)
-    sim.disconnect()
+            # Increment the camera counter
+            camera_counter += 20
+
+            # Update camera sensor at specified intervals
+            if camera_counter % camera_update_interval == 0:
+                view_matrix = camera.update_sensor()
+                width, height, rgb, depth, seg = p.getCameraImage(640, 480, viewMatrix=view_matrix)  # Lower resolution
+
+            # Lidar processing
+            ray_data, _, _ = lidar.retrieve_data()
+            lidar.simulate(ray_data)
+
+            # Delay for real-time simulation
+            time.sleep(1 / 240)  # Maintain 240 Hz simulation speed
+    except KeyboardInterrupt:
+        print("Simulation stopped by user.")
+    finally:
+        sim.disconnect()
