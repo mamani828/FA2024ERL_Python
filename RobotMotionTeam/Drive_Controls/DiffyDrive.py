@@ -29,8 +29,6 @@ class PybulletEnvironment:
         self.v_angular_slider = p.addUserDebugParameter("Angular Velocity", -200, 200, 0)
 
     
-    def getOrientation (self, robot=None):
-        pass
     def run_simulation(self, boolean = True):
         logging.info("Starting simulation...")
         print(boolean)
@@ -69,7 +67,7 @@ class PybulletEnvironment:
         
 class Robot:
     def __init__(self):
-        self.robot_id = p.loadURDF("./jackal.urdf", basePosition=[0, 0, 0.2])
+        self.robot_id = p.loadURDF("./RobotMotionTeam/urdf/jackal.urdf", basePosition=[0, 0, 0.2])
         
         
         self.position = self.getPosition()
@@ -125,36 +123,7 @@ class Robot:
         
     
     
-    
 
-
-
-class PID:
-    def __init__(self, kp=0.1, ki=0.01, kd=0.05):
-        self.kp = kp
-        self.ki = ki
-        self.kd = kd
-        self.previous_error = 0
-        self.integral = 0
-        self.dt = 1 / 240.0  # Simulation time step (default is 1/240 seconds)
-
-    def update(self, kp, ki, kd):
-        """
-        Update the PID constants.
-        """
-        self.kp = kp
-        self.ki = ki
-        self.kd = kd
-
-    def calculateVelocity(self, error):
-        """
-        Compute the control output based on the error using PID.
-        """
-        self.integral += error * self.dt
-        derivative = (error - self.previous_error) / self.dt
-        output = self.kp * error + self.ki * self.integral + self.kd * derivative
-        self.previous_error = error
-        return output
 
 if __name__ == "__main__":
     env = PybulletEnvironment()

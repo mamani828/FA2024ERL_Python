@@ -113,7 +113,7 @@ class PybulletEnvironment:
 class Cylinder:
     def __init__(self):
         cylinder_height = 2
-        self.cylinder_id = p.loadURDF("cylinder.urdf", basePosition=[0, 0, cylinder_height / 2])
+        self.cylinder_id = p.loadURDF("./RobotMotionTeam/urdf/cylinder.urdf", basePosition=[0, 0, cylinder_height / 2])
         self.position = self.getPosition()
 
     def getPosition(self):
@@ -130,7 +130,7 @@ class Cylinder:
         
 class Robot:
     def __init__(self):
-        self.robot_id = p.loadURDF("./racecar.urdf", basePosition=[0, 0, 0.2])
+        self.robot_id = p.loadURDF("./RobotMotionTeam/urdf/racecar.urdf", basePosition=[0, 0, 0.2])
         self.position = self.getPosition()
 
         # Retrieve wheel and steering joint indices
