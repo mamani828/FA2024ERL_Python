@@ -3,7 +3,7 @@
    3   <link name="base_link">
    4     <visual>
    5       <geometry>
-   6         <cylinder length="2" radius="1"/>
+   6         <cylinder length="0.5" radius="0.25"/>
    7       </geometry>
    8     </visual>
         <collision>

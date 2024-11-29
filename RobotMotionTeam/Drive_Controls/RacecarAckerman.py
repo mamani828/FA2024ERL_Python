@@ -3,9 +3,10 @@ import pybullet_data
 import logging
 import time
 import numpy as np
+
 # Configure logging
 logging.basicConfig(
-    filename="./RobotMotionTeam/Simulation_logging/Ackerman_simulation.log",
+    filename="..\Simulation_logging\Ackerman_simulation.log",
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
@@ -17,14 +18,14 @@ class PybulletEnvironment:
         self.physics_client = p.connect(p.GUI)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setGravity(0, 0, -9.81)
-        #p.changeDynamics(
+        # p.changeDynamics(
         #    lateralFriction=2
-        #)
+        # )
         self.plane_id = p.loadURDF("plane.urdf")
 
         # choose which to use by setting self.Cylinder to Cylinder() or Robot()
         # self.Cylinder = Cylinder()
-        
+
         self.Cylinder = Robot()
 
         # PID controllers
@@ -32,26 +33,25 @@ class PybulletEnvironment:
         self.y_pid = PID(kp=1.0, ki=0.01, kd=0.1)
 
         # Goal position sliders
-        self.x_goalpos = p.addUserDebugParameter("X Goal Position", -100, 100, 0)
-        self.y_goalpos = p.addUserDebugParameter("Y Goal Position", -100, 100, 0)
-
+        self.x_goalpos = p.addUserDebugParameter("X Goal Position", -100, 100, 1)
+        self.y_goalpos = p.addUserDebugParameter("Y Goal Position", -100, 100, 1)
 
         # PID constant sliders
         self.kp_slider = p.addUserDebugParameter("KP", 0, 10, 1)
         self.ki_slider = p.addUserDebugParameter("KI", 0, 1, 0.01)
         self.kd_slider = p.addUserDebugParameter("KD", 0, 1, 0.1)
 
-    def getOrientation (self, robot=None):
-        pass
-    def run_simulation(self, boolean = True):
+    def run_simulation(self, boolean=True):
         logging.info("Starting simulation...")
+        start_time = time.time()
         print(boolean)
 
         if boolean:
-            cube = create_new_cube()
+            cube = Cylinder();
         try:
             while True:
                 p.stepSimulation()
+                current_time = time.time()
                 time.sleep(1.0 / 240.0)
                 # Update PID constants from sliders
                 kp = p.readUserDebugParameter(self.kp_slider)
@@ -62,8 +62,17 @@ class PybulletEnvironment:
 
                 # Get current position and goal
                 current_position = self.Cylinder.getPosition()
+
                 x_goal = p.readUserDebugParameter(self.x_goalpos)
                 y_goal = p.readUserDebugParameter(self.y_goalpos)
+                line = p.addUserDebugLine([x_goal, y_goal, 0], current_position, lineColorRGB=[1, 0, 0], lineWidth=7)
+                if cube.getPosition() != [x_goal, y_goal, 1]:
+                    cube.setPosition(x_goal, y_goal)
+                    cube.updatePosition()
+                if (current_time - start_time) > 0.1:
+                    # print(current_time)
+                    p.removeAllUserDebugItems()
+                    start_time = current_time
 
                 # Calculate error
                 x_error = x_goal - current_position[0]
@@ -75,11 +84,17 @@ class PybulletEnvironment:
                 target_yaw = np.arctan2(y_error, x_error)
                 x_yaw = self.Cylinder.getHeading()
 
-                robot_x_angle = 0
+                # steering_angle = np.arctan2(np.sin(target_yaw - x_yaw), np.cos(target_yaw - x_yaw))
+                steering_angle = (target_yaw - x_yaw)
+                if x_velocity < 0:
+                    steering_angle = -steering_angle + np.pi
+                if abs(steering_angle) > np.pi:
+                    steering_angle -= 2 * np.pi
 
-                steering_angle = np.arctan2(np.sin(target_yaw - x_yaw), np.cos(target_yaw - x_yaw))
+                #print(steering_angle, x_velocity, target_yaw, x_yaw)
                 # Apply the velocities
-                self.Cylinder.setVelocity(x_velocity,steering_angle)
+                # self.Cylinder.setVelocity(np.abs(x_velocity),steering_angle) #forward only
+                self.Cylinder.setVelocity(x_velocity, steering_angle)
 
                 # Update debug text
                 # self.update_info_text(x_velocity, y_velocity, current_position)
@@ -113,7 +128,7 @@ class PybulletEnvironment:
 class Cylinder:
     def __init__(self):
         cylinder_height = 2
-        self.cylinder_id = p.loadURDF("./RobotMotionTeam/urdf/cylinder.urdf", basePosition=[0, 0, cylinder_height / 2])
+        self.cylinder_id = p.loadURDF("../urdf/cylinder.urdf", basePosition=[5, 5, cylinder_height / 2])
         self.position = self.getPosition()
 
     def getPosition(self):
@@ -122,23 +137,25 @@ class Cylinder:
     def updatePosition(self):
         self.position = self.getPosition()
 
+    def setPosition(self, x, y):
+        p.resetBasePositionAndOrientation(self.cylinder_id, [x, y, 0], [0, 0, 0, 1])
+
     def setVelocity(self, x, y):
         p.resetBaseVelocity(self.cylinder_id, [x, y, 0])
         logging.info(f"Set cylinder velocity: X={x}, Y={y}")
 
 
-        
 class Robot:
     def __init__(self):
-        self.robot_id = p.loadURDF("./RobotMotionTeam/urdf/racecar.urdf", basePosition=[0, 0, 0.2])
+        self.robot_id = p.loadURDF("../urdf/racecar.urdf", basePosition=[0, 0, 0.2])
         self.position = self.getPosition()
 
         # Retrieve wheel and steering joint indices
         self.steering_links = [4, 6]  # Front left and front right steering links
-        self.wheels = [2, 3, 5, 7]   # All four wheels
+        self.wheels = [2, 3, 5, 7]  # All four wheels
 
     def getPosition(self):
- 
+
         return p.getBasePositionAndOrientation(self.robot_id)[0]
 
     def getHeading(self):
@@ -165,7 +182,7 @@ class Robot:
                 jointIndex=wheel,
                 controlMode=p.VELOCITY_CONTROL,
                 targetVelocity=forward_speed_x,
-                force = 0.5
+                force=0.25
             )
 
         logging.info(f"Set racecar velocity: Forward={forward_speed_x}, Steering={steering_angle}")
@@ -198,17 +215,7 @@ class PID:
         self.previous_error = error
         return output
 
-def create_new_cube():
-    cube_size = 0.3
-    x = 10
-    y = 10
-    position = [x, y, cube_size/2]
-    orientation = p.getQuaternionFromEuler([0, 0, 0])
-    color = list(np.random.uniform(0, 1, 3)) + [1]  # Random RGB + Alpha
-    visual_shape = p.createVisualShape(shapeType=p.GEOM_BOX, halfExtents=[cube_size/2]*3, rgbaColor=color)
-    collision_shape = p.createCollisionShape(shapeType=p.GEOM_BOX, halfExtents=[cube_size/2]*3)
-    boxId = p.createMultiBody(baseMass=1, baseVisualShapeIndex=visual_shape, baseCollisionShapeIndex=collision_shape, basePosition=position, baseOrientation=orientation)
-    return boxId
+
 if __name__ == "__main__":
     env = PybulletEnvironment()
     try:
