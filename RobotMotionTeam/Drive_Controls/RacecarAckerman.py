@@ -5,7 +5,7 @@ import time
 import numpy as np
 # Configure logging
 logging.basicConfig(
-    filename="simulation.log",
+    filename="./RobotMotionTeam/Simulation_logging/Ackerman_simulation.log",
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
