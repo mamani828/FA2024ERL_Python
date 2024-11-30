@@ -4,32 +4,43 @@ import yaml
 import pybullet as p
 import pybullet_data
 import numpy as np
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLabel
-from PyQt5.QtCore import QTimer
-from PyQt5.QtGui import QPixmap, QImage
-from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QSlider
-from PyQt5.QtCore import Qt
+from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLabel, QSlider
+from PyQt6.QtCore import QTimer, Qt
+from PyQt6.QtGui import QPixmap, QImage
+from PyQt6 import QtWidgets
 from Sensors import Camera, Lidar
 from SensorTest import Robot
+from QtMap import RobotMap
 
 
 SENSOR_CONFIG_PATH = os.path.join(os.path.dirname(__file__),
                                   'config/sensors.yaml')
-
-
-
+DEFAULT_GRID_SIZE = 10
+SIM_TIME_CONSTANT = 4  # How often the simulation is updated
 
 class SimulationApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.initUI()
         self.sliderUI()
-        self.simulation_running = False
+        self.initSim()
+        #self.initMap()
+        self.simulation_running = True
 
-        # Initialize PyBullet simulation
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update_simulation)
+        self.timer.start(SIM_TIME_CONSTANT)
+
+    def initSim(self):
         self.physicsClient = p.connect(p.GUI)
+        p.setGravity(0, 0, -9.81)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
+
+        coordinates = [0, 0, 0]  # initial coordinates and orientation for the plane
+        orientation = [0, 0, 0]  # Euler Angles Roll, Pitch, Yaw
+        initial_orientation = p.getQuaternionFromEuler(orientation)  # Converting to Quaternion
+        self.plane_id = p.loadURDF("plane.urdf", coordinates, initial_orientation)
+
         self.robot = Robot()
 
         camera_config = SimulationApp.open_yaml("camera_configs")
@@ -40,9 +51,7 @@ class SimulationApp(QMainWindow):
         self.lidar = Lidar(self.robot, lidar_config)
         self.lidar.setup()
 
-        # Timer for updating the simulation
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.update_simulation)
+        self.counter = 0
 
     def initUI(self):
         self.setWindowTitle("PyBullet + PyQt5 Simulation")
@@ -54,32 +63,37 @@ class SimulationApp(QMainWindow):
         layout = QVBoxLayout(central_widget)
 
         # UI elements of the Start/Stop button
-        self.toggle_button = QPushButton("Start Simulation", self)
+        self.toggle_button = QPushButton("Stop Simulation", self)
         self.toggle_button.clicked.connect(self.toggle_simulation)
         layout.addWidget(self.toggle_button)
 
         # Visualization label
         self.visualization_label = QLabel(self)
         self.visualization_label.setText("Simulation Visualization")
-        self.visualization_label.setFixedSize(640, 480)
         layout.addWidget(self.visualization_label)
+
+        # Robot map
+        self.robot_map = RobotMap(DEFAULT_GRID_SIZE)
+        self.robot_map.setFixedSize(640, 640)
+        layout.addWidget(self.robot_map)
+        
         
         # UI elements of the Slider button
 
     def sliderUI(self):
         #Slider setup
-        self.slider = QtWidgets.QSlider(Qt.Horizontal, self)
+        self.slider = QtWidgets.QSlider(Qt.Orientation.Horizontal, self)
         self.slider.setMinimum(0)
         self.slider.setMaximum(50) # Allows users to slide between 0 Lidar rays to 50
         self.slider.setValue(0) # Intializing Lidar to have 20 rays 
-        self.slider.setTickPosition(QSlider.TicksBelow)
+        self.slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self.slider.setTickInterval(2)
         self.slider.valueChanged.connect(self.on_slide) # Connects to a slot to handle slider
 
         # Adding the sldier to the layout 
         central_widget = self.centralWidget()
         layout = central_widget.layout()
-        layout.addWidget(self.slider) 
+        layout.addWidget(self.slider)
     
     def on_slide(self,value):
         if value > 0:
@@ -97,15 +111,25 @@ class SimulationApp(QMainWindow):
                 p.removeUserDebugItem(ray_id)
             self.lidar.ray_ids.clear()
 
+    def store_camera_data(self):
+        camera_state = p.getDebugVisualizerCamera()
+        self.cam_target_position = camera_state[11]  # Target position (x, y, z)
+        self.cam_distance = camera_state[10]         # Camera distance
+        self.cam_yaw = camera_state[8]               # Yaw angle
+        self.cam_pitch = camera_state[9]             # Pitch angle
+
     def toggle_simulation(self):
         if self.simulation_running:
             self.timer.stop()
-            p.disconnect(self.physicsClient)
+            self.store_camera_data()
+            self.physicsClient = p.disconnect(self.physicsClient)
             self.simulation_running = False
             self.toggle_button.setText("Start Simulation")
         else:
-            self.physicsClient = p.connect(p.GUI)
-            self.timer.start(100)  # Update every 100ms
+            self.timer.start(SIM_TIME_CONSTANT)
+            self.initSim()
+            p.resetDebugVisualizerCamera(self.cam_distance, self.cam_yaw,
+                                         self.cam_pitch, self.cam_target_position)
             self.simulation_running = True
             self.toggle_button.setText("Stop Simulation")
 
@@ -117,9 +141,11 @@ class SimulationApp(QMainWindow):
         view_matrix = self.camera.update_sensor()
 
         # Update LiDAR data
-        rays_data, dists, bearings = self.lidar.retrieve_data(robot_state=[0, 0, 0])
+        rays_data, dists, coords  = self.lidar.retrieve_data(common=False)
+        robot_pos, robot_orn = p.getBasePositionAndOrientation(self.robot.robot_id)
 
         # For visualization, create a simple 2D plot (e.g., with QImage/QPixmap)
+        """
         lidar_image = np.zeros((480, 640, 3), dtype=np.uint8)
         for i, dist in enumerate(dists):
             if dist < self.lidar.ray_len:
@@ -130,6 +156,13 @@ class SimulationApp(QMainWindow):
         q_image = QImage(lidar_image, 640, 480, QImage.Format_RGB888)
         pixmap = QPixmap.fromImage(q_image)
         self.visualization_label.setPixmap(pixmap)
+        """
+
+        if (self.counter == 240):
+            self.robot_map.calculate_matrix(robot_pos, coords)
+            self.counter = 0
+        
+        self.counter += 1
 
     @staticmethod
     def open_yaml(config_name):
@@ -165,4 +198,4 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     main_window = SimulationApp()
     main_window.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

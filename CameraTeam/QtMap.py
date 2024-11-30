@@ -4,21 +4,59 @@ from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget
 from PyQt6.QtGui import QPainter, QColor
 from PyQt6.QtCore import Qt, QTimer
 
+
+
+COLOR_MAP = {0: QColor("white"), 1: QColor("black"),
+             2: QColor("red"), 3: QColor("blue")}
+DEFAULT_SCALE = 2  # Scale from PyBullet to map
+CELL_SIZE = 3  # Pixel length/width of each cell
+WHITE = 0
+BLACK = 1
+RED = 2
+BLUE = 3
+
+
 class RobotMap(QWidget):
-    def __init__(self, grid):
+    def __init__(self, grid_size):
         super().__init__()
-        self.cell_size = 3  # Size of each cell in pixels
-        self.grid = grid  # Matrix (numpy array or list of lists)
-        self.grid_size = len(grid)  # Number of cells along each dimension
-        self.color_map = {0: QColor("white"), 1: QColor("black"), 2: QColor("red")}
+        self.cell_size = CELL_SIZE
+        self.grid = np.zeros((grid_size, grid_size), dtype=int)
+        self.grid_size = grid_size  # Number of cells along each dimension
+        self.color_map = COLOR_MAP
+        self.robot_x = 0
+        self.robot_y = 0
 
         # Set the widget size based on the grid dimensions
-        self.setFixedSize(self.grid_size * self.cell_size, self.grid_size * self.cell_size)
+        self.setFixedSize(self.grid_size * self.cell_size // 2, self.grid_size * self.cell_size // 2)
 
-    def update_grid(self, new_grid):
+    def update_map(self):
         """Update the grid and trigger a repaint."""
-        self.grid = new_grid
         self.update()
+
+    def calculate_matrix(self, robot_pos, ray_pos, distance=None, scaling_factor=DEFAULT_SCALE):
+        #  Sets previous robot position to white
+        robot_grid_x = int(self.robot_x // scaling_factor)
+        robot_grid_y = int(self.robot_y // scaling_factor)
+        self.grid[robot_grid_x][robot_grid_y] = WHITE
+
+        #  Gets new robot position and sets color in map
+        self.robot_x, self.robot_y, _ = robot_pos
+        robot_grid_x = int(self.robot_x // scaling_factor)
+        robot_grid_y = int(self.robot_y // scaling_factor)
+        self.grid[robot_grid_x][robot_grid_y] = RED
+
+        #  Iterates through ray data and sets position to black
+        for ray_x, ray_y in ray_pos:
+            if np.isnan(ray_x) or np.isnan(ray_y):
+                continue
+            else:
+                grid_x = ray_x // scaling_factor
+                grid_y = ray_y // scaling_factor
+                if (grid_x == robot_grid_x and grid_y == robot_grid_y):
+                    continue
+                self.grid[int(grid_x)][int(grid_y)] = BLACK
+        self.update_map()
+        
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -34,41 +72,3 @@ class RobotMap(QWidget):
                     self.cell_size,
                     self.cell_size,
                 )
-
-class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Real-Time Robot Map")
-        self.setGeometry(100, 100, 600, 600)
-
-        # Initialize a sample 100x100 matrix
-        self.grid_size = 200
-        self.matrix = self.generate_sample_matrix(self.grid_size)
-
-        # Create an instance of RobotMap and set it as the central widget
-        self.robot_map = RobotMap(self.matrix)
-        self.setCentralWidget(self.robot_map)
-
-        # Set up a QTimer to update the map in real time
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.update_map)  # Connect to update method
-        self.timer.start(500)  # Update every 500 milliseconds
-
-    def generate_sample_matrix(self, size):
-        """Generate a random matrix with values 0, 1, or 2."""
-        return np.random.choice([0, 1, 2], size=(size, size))
-
-    def update_map(self):
-        """Generate a new matrix and update the map."""
-        self.matrix = self.generate_sample_matrix(self.grid_size)
-        self.robot_map.update_grid(self.matrix)
-
-# Entry point of the application
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-
-    # Create and show the main window
-    main_window = MainWindow()
-    main_window.show()
-
-    sys.exit(app.exec())

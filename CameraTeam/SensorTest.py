@@ -6,6 +6,7 @@ import os
 import yaml
 import sys
 from Sensors import Camera, Lidar
+from QtMap import RobotMap
 
 SENSOR_CONFIG_PATH = os.path.join(os.path.dirname(__file__),
                                   'config/sensors.yaml')
@@ -112,6 +113,10 @@ if __name__ == "__main__":
             # Lidar processing
             ray_data, dists, coords = lidar.retrieve_data(common=False)
             lidar.simulate(ray_data)
+            robot_pos, robot_orn = p.getBasePositionAndOrientation(robot.robot_id)
+            #map = RobotMap(200)
+            #map.calculate_matrix(robot_pos, coords, dists)
+            #map.update_map()
 
             # Delay for real-time simulation
             time.sleep(1 / 240)  # Maintain 240 Hz simulation speed
