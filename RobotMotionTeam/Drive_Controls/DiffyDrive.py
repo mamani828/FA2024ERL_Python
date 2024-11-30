@@ -85,8 +85,8 @@ class PybulletEnvironment:
                 self.jackal_robot.setVelocity()
                 
                 
-                # logging.info(f"Position: {', '.join(str(i) for i in self.jackal_robot.position)}, Errors: X={self.x_error}, Y={self.y_error}, "
-                #              f"Velocities: X={self.linear_velocity}, Heading={self.h_error}, PID: KP={self.kp}, KI={self.ki}, KD={self.kd}")
+                logging.info(f"Position: {', '.join(str(i) for i in self.jackal_robot.position)}, Errors: X={self.x_error}, Y={self.y_error}, "
+                             f"Velocities: X={self.linear_velocity}, Heading={self.h_error}, PID: KP={self.kp}, KI={self.ki}, KD={self.kd}")
 
                 
                 
