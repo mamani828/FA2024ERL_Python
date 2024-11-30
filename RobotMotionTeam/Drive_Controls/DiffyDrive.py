@@ -8,6 +8,7 @@ import math
 # from RobotMotionTeam.Utils.Controllers.PurePursuit import PurePursuit
 # Configure logging
 # from ..Utils.Controllers.Pid import Pid
+# import ..Utils.Controllers.Pid 
 
 logging.basicConfig(
     filename="./RobotMotionTeam/Simulation_logging/Diffy_simulation.log",
@@ -36,9 +37,9 @@ class PybulletEnvironment:
         self.goalPointX=p.addUserDebugParameter("Goal Point X", -50, 50, 0)
         self.goalPointY=p.addUserDebugParameter("Goal Point Y", -50, 50, 0)
         
-        self.kp=p.addUserDebugParameter("kp", -10, 10, 4)
+        self.kp=p.addUserDebugParameter("kp", -10, 10, 8)
         self.ki=p.addUserDebugParameter("ki", -10, 10, 0)
-        self.kd=p.addUserDebugParameter("kd", -10, 10, 0.1)
+        self.kd=p.addUserDebugParameter("kd", -10, 10, 0.5)
 
     
     def run_simulation(self, boolean = True):
@@ -47,21 +48,17 @@ class PybulletEnvironment:
         
 
             
-        self.linear_pid=PID(kp=1.0, ki=0, kd=0.1)
+        self.linear_pid=PID(kp=1.0, ki=0, kd=0.01)
+        
+        
         while True:
                 p.stepSimulation()
                 time.sleep(1.0 / 240.0)
-        
-                self.v_forward = p.readUserDebugParameter(self.v_forward_slider)
-                self.v_angular = p.readUserDebugParameter(self.v_angular_slider)
-                
-                self.x_goal=p.readUserDebugParameter(self.goalPointX)
-                self.y_goal=p.readUserDebugParameter(self.goalPointY)
-                self.linear_pid.update(float(p.readUserDebugParameter(self.kp)),float(p.readUserDebugParameter(self.ki)),float(p.readUserDebugParameter(self.kd)))
+                self.read_sliders()
         
             # Drive Control
                 self.jackal_robot.inverse_kinematics(self.v_forward,self.v_angular)
-                # self.jackal_robot.setVelocity()
+                self.jackal_robot.setVelocity()
                 
                 # localization
             
@@ -84,6 +81,7 @@ class PybulletEnvironment:
                 self.jackal_robot.inverse_kinematics(self.linear_velocity,self.h_error)
                 self.jackal_robot.setVelocity()
                 
+                print(self.jackal_robot.localize())
                 
                 logging.info(f"Position: {', '.join(str(i) for i in self.jackal_robot.position)}, Errors: X={self.x_error}, Y={self.y_error}, "
                              f"Velocities: X={self.linear_velocity}, Heading={self.h_error}, PID: KP={self.kp}, KI={self.ki}, KD={self.kd}")
@@ -117,7 +115,16 @@ class PybulletEnvironment:
         while radians < -math.pi:
             radians += 2 * math.pi
         return radians
-        
+    def read_sliders(self):
+        try:
+            self.v_forward = p.readUserDebugParameter(self.v_forward_slider)
+            self.v_angular = p.readUserDebugParameter(self.v_angular_slider)
+            
+            self.x_goal=p.readUserDebugParameter(self.goalPointX)
+            self.y_goal=p.readUserDebugParameter(self.goalPointY)
+            self.linear_pid.update(float(p.readUserDebugParameter(self.kp)),float(p.readUserDebugParameter(self.ki)),float(p.readUserDebugParameter(self.kd)))
+        except:
+            return
 class Robot:
     def __init__(self):
         self.robot_id = p.loadURDF("./RobotMotionTeam/urdf/jackal.urdf", basePosition=[0, 0, 0.2])
@@ -129,6 +136,8 @@ class Robot:
         self.track_radius=0.187795 
         self.vl=0
         self.vr=0
+        
+        
         
         """
         Wheel Index 1: Front Left
@@ -162,7 +171,7 @@ class Robot:
                     jointIndex=wheel,
                     controlMode=p.VELOCITY_CONTROL,
                     targetVelocity=self.vl,
-                    force = 50 # i think the torque on a jackal
+                    force = 7 # i think the torque on a jackal
                 )
             for wheel in self.wheels_right:
                 p.setJointMotorControl2(
@@ -170,7 +179,7 @@ class Robot:
                     jointIndex=wheel,
                     controlMode=p.VELOCITY_CONTROL,
                     targetVelocity=self.vr,
-                    force = 50 # i think the torque on a jackal
+                    force = 7 # i think the torque on a jackal
                 )
     def inverse_kinematics(self,v_f, v0): # converting forward+angular velocity into wheel velocities
         self.vr=v_f+self.track_radius*v0        # velocity of left wheels
