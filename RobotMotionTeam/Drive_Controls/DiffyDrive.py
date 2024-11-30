@@ -4,6 +4,7 @@ import logging
 import time
 import numpy as np
 import math
+from RobotMotionTeam import PID
 # from RobotMotionTeam.Utils.Controllers.Pid import PID
 # from RobotMotionTeam.Utils.Controllers.PurePursuit import PurePursuit
 # Configure logging
@@ -44,9 +45,6 @@ class PybulletEnvironment:
     
     def run_simulation(self, boolean = True):
         logging.info("Starting simulation...")
-        print(boolean)
-        
-
             
         self.linear_pid=PID(kp=1.0, ki=0, kd=0.01)
         
@@ -189,34 +187,6 @@ class Robot:
     """ wheel velocity: [wheel front left, wheel front right, wheel back left, wheel back right]"""
     # def forward_kinematics(self,wheel_vels): # converting wheel velocities into forward+angular velocity 
         
-class PID:
-    def __init__(self, kp=0.1, ki=0.01, kd=0.05,dt=1/240.0):
-        self.kp = kp
-        self.ki = ki
-        self.kd = kd
-        self.previous_error = 0
-        self.integral = 0
-        self.dt = dt # Simulation time step (default is 1/240 seconds)
-
-    def update(self, kp, ki, kd):
-        """
-        Update the PID constants.
-        """
-        self.kp = kp
-        self.ki = ki
-        self.kd = kd
-
-    def calculateVelocity(self, error):
-        """
-        Compute the control output based on the error using PID.
-        """
-        self.integral += error * self.dt
-        derivative = (error - self.previous_error) / self.dt
-        output = self.kp * error + self.ki * self.integral + self.kd * derivative
-        self.previous_error = error
-        return output        
-    
-    
 
 
 if __name__ == "__main__":
