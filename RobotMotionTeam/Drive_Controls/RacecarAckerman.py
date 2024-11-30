@@ -47,7 +47,7 @@ class PybulletEnvironment:
         print(boolean)
 
         if boolean:
-            cube = Cylinder();
+            cube = Cylinder()
         try:
             while True:
                 p.stepSimulation()
@@ -128,7 +128,7 @@ class PybulletEnvironment:
 class Cylinder:
     def __init__(self):
         cylinder_height = 2
-        self.cylinder_id = p.loadURDF("../urdf/cylinder.urdf", basePosition=[5, 5, cylinder_height / 2])
+        self.cylinder_id = p.loadURDF("./RobotMotionTeam/urdf/cylinder.urdf", basePosition=[5, 5, cylinder_height / 2])
         self.position = self.getPosition()
 
     def getPosition(self):
@@ -147,7 +147,7 @@ class Cylinder:
 
 class Robot:
     def __init__(self):
-        self.robot_id = p.loadURDF("../urdf/racecar.urdf", basePosition=[0, 0, 0.2])
+        self.robot_id = p.loadURDF("./RobotMotionTeam/urdf/racecar.urdf", basePosition=[0, 0, 0.2])
         self.position = self.getPosition()
 
         # Retrieve wheel and steering joint indices
