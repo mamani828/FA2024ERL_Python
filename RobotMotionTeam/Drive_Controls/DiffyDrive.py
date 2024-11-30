@@ -36,9 +36,9 @@ class PybulletEnvironment:
         self.goalPointX=p.addUserDebugParameter("Goal Point X", -50, 50, 0)
         self.goalPointY=p.addUserDebugParameter("Goal Point Y", -50, 50, 0)
         
-        self.kp=p.addUserDebugParameter("kp", -10, 10, 0)
+        self.kp=p.addUserDebugParameter("kp", -10, 10, 4)
         self.ki=p.addUserDebugParameter("ki", -10, 10, 0)
-        self.kd=p.addUserDebugParameter("kd", -10, 10, 0)
+        self.kd=p.addUserDebugParameter("kd", -10, 10, 0.1)
 
     
     def run_simulation(self, boolean = True):
@@ -162,7 +162,7 @@ class Robot:
                     jointIndex=wheel,
                     controlMode=p.VELOCITY_CONTROL,
                     targetVelocity=self.vl,
-                    force = 32 # i think the torque on a jackal
+                    force = 50 # i think the torque on a jackal
                 )
             for wheel in self.wheels_right:
                 p.setJointMotorControl2(
@@ -170,7 +170,7 @@ class Robot:
                     jointIndex=wheel,
                     controlMode=p.VELOCITY_CONTROL,
                     targetVelocity=self.vr,
-                    force = 32 # i think the torque on a jackal
+                    force = 50 # i think the torque on a jackal
                 )
     def inverse_kinematics(self,v_f, v0): # converting forward+angular velocity into wheel velocities
         self.vr=v_f+self.track_radius*v0        # velocity of left wheels
