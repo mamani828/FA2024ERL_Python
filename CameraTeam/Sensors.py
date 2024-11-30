@@ -316,7 +316,7 @@ class Lidar:
         for ray_id in self.ray_ids:
             p.removeUserDebugItem(ray_id)
         
-        # Reintialize the rays
+        self.ray_ids.clear()
         self.setup()
 
         for k in kwargs.keys():

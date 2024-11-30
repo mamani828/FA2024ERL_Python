@@ -1,4 +1,6 @@
 import sys
+import os
+import yaml
 import pybullet as p
 import pybullet_data
 import numpy as np
@@ -8,8 +10,15 @@ from PyQt5.QtGui import QPixmap, QImage
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QSlider
 from PyQt5.QtCore import Qt
-from Sensors import Camera, Lidar  # Assuming your classes are saved in sensor_code.py
+from Sensors import Camera, Lidar
 from SensorTest import Robot
+
+
+SENSOR_CONFIG_PATH = os.path.join(os.path.dirname(__file__),
+                                  'config/sensors.yaml')
+
+
+
 
 class SimulationApp(QMainWindow):
     def __init__(self):
@@ -21,25 +30,14 @@ class SimulationApp(QMainWindow):
         # Initialize PyBullet simulation
         self.physicsClient = p.connect(p.GUI)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
-        self.robot_id = Robot()
+        self.robot = Robot()
 
-        self.camera = Camera(self.robot_id, {
-            'camera_distance': 2,
-            'yaw': 0,
-            'pitch': -30,
-            'roll': 0
-        })
+        camera_config = SimulationApp.open_yaml("camera_configs")
+        lidar_config = SimulationApp.open_yaml("lidar_configs")
+
+        self.camera = Camera(self.robot, camera_config)
         
-        self.lidar = Lidar(self.robot_id, {
-            'lidar_joints': 0,
-            'hit_color': [1, 0, 0],
-            'miss_color': [0, 1, 0],
-            'num_rays': 20,
-            'lidar_angle1': 0,
-            'lidar_angle2': 360,
-            'ray_start_len': 0.1,
-            'ray_len': 5
-        })
+        self.lidar = Lidar(self.robot, lidar_config)
         self.lidar.setup()
 
         # Timer for updating the simulation
@@ -89,11 +87,9 @@ class SimulationApp(QMainWindow):
             if value != self.lidar.num_rays: #only updating if the value has changed 
                 for ray_id in self.lidar.ray_ids:
                     p.removeUserDebugItem(ray_id)
-                self.lidar.ray_ids.clear() # Clear the ray_ids list 
+                
+                self.lidar.gui_change_parameter(num_rays=value)
 
-                #Updating the lidar and reconfiguring with new num_rays(updating the list)
-                self.lidar.num_rays = value 
-                self.lidar.setup() # Reconfiguring the lidar to apply the new num_rays value 
         else:
             print("No Lidar Rays")
             # Remove Every single ray if the slider value is 0
@@ -101,7 +97,6 @@ class SimulationApp(QMainWindow):
                 p.removeUserDebugItem(ray_id)
             self.lidar.ray_ids.clear()
 
-    
     def toggle_simulation(self):
         if self.simulation_running:
             self.timer.stop()
@@ -135,6 +130,36 @@ class SimulationApp(QMainWindow):
         q_image = QImage(lidar_image, 640, 480, QImage.Format_RGB888)
         pixmap = QPixmap.fromImage(q_image)
         self.visualization_label.setPixmap(pixmap)
+
+    @staticmethod
+    def open_yaml(config_name):
+        try:
+            with open(SENSOR_CONFIG_PATH, 'r') as file:
+                return yaml.safe_load(file)[config_name]
+        except FileNotFoundError:
+            print("Config file not found!")
+            sys.exit(0)
+
+class Object:
+    def __init__(self, coordinates, color):
+        self.color = color
+        self.coordinates = coordinates
+        self.object_id = self.loading_box()  # Storing the object's ID
+
+    def loading_box(self):
+        half_extents = [0.5, 0.5, 0.5]
+        box_coordinates = self.coordinates
+        box_orientation = [0, 0, 0]
+        initial_box_orientation = p.getQuaternionFromEuler(box_orientation)
+
+        box_collision_shape = p.createCollisionShape(shapeType=p.GEOM_BOX, halfExtents=half_extents)
+        box_visual_shape = p.createVisualShape(shapeType=p.GEOM_BOX, halfExtents=half_extents, rgbaColor=self.color)
+
+        # Create a multibody and return its ID
+        return p.createMultiBody(baseMass=50, baseCollisionShapeIndex=box_collision_shape,
+                                 baseVisualShapeIndex=box_visual_shape,
+                                 basePosition=box_coordinates,
+                                 baseOrientation=initial_box_orientation)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

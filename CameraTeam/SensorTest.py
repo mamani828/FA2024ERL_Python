@@ -76,6 +76,7 @@ class Object:
                                  baseVisualShapeIndex=box_visual_shape,
                                  basePosition=box_coordinates,
                                  baseOrientation=initial_box_orientation)
+
 """
 @target_object params
 first set of [] coordinates of box & second set of [] are the colors of the box
@@ -109,7 +110,7 @@ if __name__ == "__main__":
                 width, height, rgb, depth, seg = p.getCameraImage(640, 480, viewMatrix=view_matrix)  # Lower resolution
 
             # Lidar processing
-            ray_data, _, _ = lidar.retrieve_data()
+            ray_data, dists, coords = lidar.retrieve_data(common=False)
             lidar.simulate(ray_data)
 
             # Delay for real-time simulation
