@@ -49,7 +49,7 @@ class Robot:
         """
         force = FORCE
         steer_angle = STEERING_ANGLE
-
+            
         if key == "W":
             # Apply forward force to all wheels
             for wheel in self.wheel_indices:

@@ -270,7 +270,8 @@ class SimulationApp(QMainWindow):
         """
 
         if (self.map_counter == 15):
-            self.robot_map.first_calculate_matrix(robot_pos, coords)
+            ray_len = self.gui_values["ray_len"]
+            self.robot_map.third_calculate_matrix(robot_pos, coords,self.gui_values)
             self.map_counter = 0
         
         self.map_counter += 1
@@ -283,6 +284,7 @@ class SimulationApp(QMainWindow):
         Detects key presses and moves the robot accordingly.
         """
         keys = p.getKeyboardEvents()
+      
         if ord("w") in keys and keys[ord("w")] & p.KEY_IS_DOWN:
             self.robot.move("W")
         elif ord("s") in keys and keys[ord("s")] & p.KEY_IS_DOWN:
