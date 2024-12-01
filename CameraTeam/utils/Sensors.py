@@ -55,7 +55,7 @@ class Camera:
     Camera sensor that is attached to the car. Provides visual feedback
     as to what the car currently sees.
     """
-    def __init__(self, target_robot: int, config: dict) -> None:
+    def __init__(self, robot_id, config: dict) -> None:
         """
         Initializes the robot camera.
 
@@ -71,10 +71,11 @@ class Camera:
         self.YAW = config['yaw']
         self.PITCH = config['pitch']
         self.ROLL = config['roll']
+        self.JOINT = config['camera_joint']
 
         # Gets the car ID
-        self.target_robot = target_robot
-
+        self.target_robot = robot_id
+        self.projMat = p.getDebugVisualizerCamera()[3] 
     def update_sensor(self) -> list:
         """
         Computes the current view_matrix of the camera and updates
@@ -88,14 +89,25 @@ class Camera:
             None.
         """
         # Get the robot's position and orientation
-        robot_pos, _ = p.getBasePositionAndOrientation(self.target_robot.robot_id)
+        #robot_pos, _ = p.getBasePositionAndOrientation(self.target_robot.robot_id)
 
         # Camera is behind and above robot
-        camera_pos = [robot_pos[0] - self.CAMERA_DISTANCE, robot_pos[1], robot_pos[2] + 0.5]
-        view_matrix = p.computeViewMatrix(camera_pos, robot_pos, [0, 0, 1])
+        #camera_pos = [robot_pos[0] - self.CAMERA_DISTANCE, robot_pos[1], robot_pos[2] + 0.5]
+        #view_matrix = p.computeViewMatrix(camera_pos, robot_pos, [0, 0, 1])
 
-        width, height, rgb_img, depth_img, seg_img = \
-            p.getCameraImage(640, 480, viewMatrix=view_matrix)
+        # Updates to give Car POV: 
+        ls = p.getLinkState(self.target_robot, self.JOINT, computeForwardKinematics=True)
+        camPos = ls[0]
+        camOrn = ls[1]
+        camMat = p.getMatrixFromQuaternion(camOrn)
+        forwardVec = [camMat[0], camMat[3], camMat[6]]
+        camUpVec = [camMat[2], camMat[5], camMat[8]]
+        camTarget = [camPos[0]+forwardVec[0]*10,camPos[1]+forwardVec[1]*10,camPos[2]+forwardVec[2]*10]
+        camUpTarget = [camPos[0]+camUpVec[0],camPos[1]+camUpVec[1],camPos[2]+camUpVec[2]]
+        viewMat = p.computeViewMatrix(camPos, camTarget, camUpVec)
+        view_matrix = viewMat
+        width, height, rgbImg, depthImg, segImg  = p.getCameraImage(320,200,viewMatrix=viewMat,projectionMatrix=self.projMat, renderer=p.ER_BULLET_HARDWARE_OPENGL)
+        return view_matrix
 
 
 #  Note: Imported from main GitHub. Modify as needed.

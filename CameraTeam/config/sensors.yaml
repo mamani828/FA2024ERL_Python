@@ -3,6 +3,7 @@ camera_configs:
   yaw: 0
   pitch: -30
   roll: 0
+  camera_joint: 9
 lidar_configs:
   lidar_joints: 8
   lidar_angle1: 45
