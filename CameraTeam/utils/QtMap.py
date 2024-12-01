@@ -19,15 +19,16 @@ BLUE = 3
 class RobotMap(QWidget):
     def __init__(self, grid_size):
         super().__init__()
-        self.cell_size = CELL_SIZE
+        # Constants
+        self.GRID_SIZE = grid_size
+        self.OFFSET = grid_size // 2
+
         self.grid = np.zeros((grid_size, grid_size), dtype=int)
-        self.grid_size = grid_size  # Number of cells along each dimension
-        self.color_map = COLOR_MAP
         self.robot_x = 0
         self.robot_y = 0
 
         # Set the widget size based on the grid dimensions
-        self.setFixedSize(self.grid_size * self.cell_size // 2, self.grid_size * self.cell_size // 2)
+        self.setFixedSize(self.GRID_SIZE * CELL_SIZE // 2, self.GRID_SIZE * CELL_SIZE // 2)
 
     def update_map(self):
         """Update the grid and trigger a repaint."""
@@ -38,11 +39,12 @@ class RobotMap(QWidget):
         robot_grid_x = int(self.robot_x // scaling_factor)
         robot_grid_y = int(self.robot_y // scaling_factor)
         self.grid[robot_grid_x][robot_grid_y] = WHITE
+        print(self.grid[robot_grid_x][robot_grid_y])
 
         #  Gets new robot position and sets color in map
         self.robot_x, self.robot_y, _ = robot_pos
-        robot_grid_x = int(self.robot_x // scaling_factor)
-        robot_grid_y = int(self.robot_y // scaling_factor)
+        robot_grid_x = int(self.robot_x // scaling_factor) + self.OFFSET
+        robot_grid_y = int(self.robot_y // scaling_factor) + self.OFFSET
         self.grid[robot_grid_x][robot_grid_y] = RED
 
         #  Iterates through ray data and sets position to black
@@ -50,25 +52,26 @@ class RobotMap(QWidget):
             if np.isnan(ray_x) or np.isnan(ray_y):
                 continue
             else:
-                grid_x = ray_x // scaling_factor
-                grid_y = ray_y // scaling_factor
+                grid_x = int(ray_x // scaling_factor) + self.OFFSET
+                grid_y = int(ray_y // scaling_factor) + self.OFFSET
                 if (grid_x == robot_grid_x and grid_y == robot_grid_y):
                     continue
                 self.grid[int(grid_x)][int(grid_y)] = BLACK
+
         self.update_map()
         
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        for row in range(self.grid_size):
-            for col in range(self.grid_size):
+        for row in range(self.GRID_SIZE):
+            for col in range(self.GRID_SIZE):
                 # Set the brush color based on the matrix value
-                painter.setBrush(self.color_map[self.grid[row][col]])
+                painter.setBrush(COLOR_MAP[self.grid[row][col]])
                 painter.setPen(Qt.PenStyle.NoPen)  # Optional: remove grid lines
                 # Draw the cell rectangle
                 painter.drawRect(
-                    col * self.cell_size,
-                    row * self.cell_size,
-                    self.cell_size,
-                    self.cell_size,
+                    col * CELL_SIZE,
+                    row * CELL_SIZE,
+                    CELL_SIZE,
+                    CELL_SIZE,
                 )

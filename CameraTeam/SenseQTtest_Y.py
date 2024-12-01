@@ -13,15 +13,16 @@ from Quartz import CGWindowListCopyWindowInfo, kCGWindowListOptionOnScreenOnly
 from AppKit import NSApplication, NSRunningApplication
 from PyQt5 import sip
 
-from Sensors import Camera, Lidar
-from SensorTest import Robot
-from QtMap import RobotMap
+from utils.Sensors import Camera, Lidar
+from utils.QtMap import RobotMap
+from utils.SimulationObjects import Robot, Object
 
 
 SENSOR_CONFIG_PATH = os.path.join(os.path.dirname(__file__),
                                   'config/sensors.yaml')
 DEFAULT_GRID_SIZE = 10
 SIM_TIME_CONSTANT = 4  # How often the simulation is updated
+
 
 class SimulationApp(QMainWindow):
     def __init__(self):
