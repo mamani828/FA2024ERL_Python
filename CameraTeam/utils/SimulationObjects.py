@@ -28,7 +28,7 @@ class Robot:
         initial_racecar_orientation = p.getQuaternionFromEuler(racecar_orientation)  # Quaternions
         self.robot_id = p.loadURDF("racecar/racecar.urdf", racecar_coordinates,
                              initial_racecar_orientation, useFixedBase=False)
-        self.robot_id = racecar  # Set robot_id to id returned by loadURDF
+        #self.robot_id = racecar  # Set robot_id to id returned by loadURDF
     def __call__(self):
         # Return the robot_id when the class instance is called
         return self.robot_id

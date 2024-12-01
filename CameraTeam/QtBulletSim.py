@@ -21,7 +21,7 @@ SENSOR_CONFIG_PATH = os.path.join(os.path.dirname(__file__),
                                   'config/sensors.yaml')
 DEFAULT_GRID_SIZE = 50
 SIM_TIME_CONSTANT = 4  # How often the simulation is updated
-CAMERA_UPDATE_INTERVAL = 10000
+CAMERA_UPDATE_INTERVAL = 8
 MAX_RAY_NUMBER = 75
 MAX_START_ANGLE = 360
 MAX_END_ANGLE = 360
@@ -257,7 +257,7 @@ class SimulationApp(QMainWindow):
         
         self.counter += 1
         self.lidar.simulate(rays_data)
-        #self.update_camera()
+        self.view_matrix = self.update_camera()
         self.cube_creator.check_cube_button()
 
     @staticmethod
