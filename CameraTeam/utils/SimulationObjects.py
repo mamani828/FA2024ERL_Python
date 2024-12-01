@@ -2,9 +2,7 @@ import pybullet as p
 
 
 BOX_MASS = 50
-FORCE = 1
-STEERING_ANGLE = 0.5
-MAX_VELOCITY = 10
+
 WALL_MASS = 0  # Mass of 0 to make the wall static
 
 class Robot:
@@ -13,10 +11,18 @@ class Robot:
     a racecar urdf at (0, 0, 0.5). This ensures that the racecar
     is in the positive z-axis, and doesn't fall through the ground.
     """
-    def __init__(self):
+    def __init__(self, config):
+        # Constants post initialization
+        self.steering_angle = config['steering_angle']
         self.robot_id = None
         self.wheel_indices = []
         self.steering_indices = []
+
+        # Variable
+        self.force = config['force']
+        self.max_velocity = config['max_velocity']
+        
+
         self.load_robot()
 
     def load_robot(self):
@@ -47,19 +53,18 @@ class Robot:
         A: Turn Left
         D: Turn Right
         """
-        force = FORCE
-        steer_angle = STEERING_ANGLE
+        steer_angle = self.steering_angle
             
         if key == "W":
             # Apply forward force to all wheels
             for wheel in self.wheel_indices:
                 p.setJointMotorControl2(self.robot_id, wheel, p.VELOCITY_CONTROL,
-                                        targetVelocity=MAX_VELOCITY, force=force)
+                                        targetVelocity=self.max_velocity, force=self.force)
         elif key == "S":
             # Apply backward force to all wheels
             for wheel in self.wheel_indices:
                 p.setJointMotorControl2(self.robot_id, wheel, p.VELOCITY_CONTROL,
-                                        targetVelocity=-MAX_VELOCITY, force=force)
+                                        targetVelocity=-self.max_velocity, force=self.force)
         elif key == "A":
             # Turn left by adjusting steering joints
             for steering in self.steering_indices:
@@ -82,10 +87,6 @@ class Robot:
             p.setJointMotorControl2(self.robot_id, steering, p.POSITION_CONTROL,
                                     targetPosition=0)
 
-    def __call__(self):
-        # Return the robot_id when the class instance is called
-        return self.robot_id
-
     def get_yaw(self):
         """
         Returns the yaw (orientation around the z-axis) of the robot.
@@ -93,12 +94,40 @@ class Robot:
         the yaw angle from it.
         """
         # Get the robot's current orientation as a quaternion (w, x, y, z)
-        robot_pos, robot_orn = p.getBasePositionAndOrientation(self.robot_id)
+        _, robot_orn = p.getBasePositionAndOrientation(self.robot_id)
         # Convert the quaternion to Euler angles (roll, pitch, yaw)
         euler_angles = p.getEulerFromQuaternion(robot_orn)
         yaw = euler_angles[2]  # Extract yaw (z-axis rotation)
         return yaw
 
+    def get_pos(self):
+        return p.getBasePositionAndOrientation(self.robot_id)[0]
+
+    def gui_change_parameter(self, **kwargs) -> None:
+        """
+        Changes the parameters in Lidar class through the GUI. This will
+        affect the next call to setup as the values have changed.
+
+        Args:
+            kwargs(dict): Variables to be changed.
+        Returns:
+            None.
+        Raises:
+            None.
+        """
+        allowed_keys = {"max_velocity", "force"}
+        
+        self.__dict__.update((k, v) for k, v in kwargs.items() if k in allowed_keys)
+
+        print(self.max_velocity)
+
+        for k in kwargs.keys():
+            if k not in allowed_keys:
+                print("{} is not allowed to be updated".format(repr(k)))
+
+    def __call__(self):
+        # Return the robot_id when the class instance is called
+        return self.robot_id
 
 class Object:
     """
@@ -138,6 +167,7 @@ class Object:
                                  baseVisualShapeIndex=box_visual_shape,
                                  basePosition=box_coordinates,
                                  baseOrientation=initial_box_orientation)
+
     def create_wall(self, position, WALL_SIZE, WALL_COLOR):
         """
         Create a wall in the PyBullet environment.

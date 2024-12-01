@@ -13,3 +13,7 @@ lidar_configs:
   ray_len: 8
   hit_color: [1, 0, 0]  # Red
   miss_color: [0, 1, 0] # Green
+robot_configs:
+  force: 1
+  steering_angle: 0.5
+  max_velocity: 10
