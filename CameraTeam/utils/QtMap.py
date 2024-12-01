@@ -140,8 +140,8 @@ class RobotMap(QWidget):
                         if self.grid[x][y] != RED and self.grid[x][y] != BLACK:  # Don't overwrite the robot's position or previous object hit data
                             self.grid[x][y] = GREY  # Mark the ray path as grey
                             # If the ray is directly in front, color it blue
-                if ray_num == round((num_rays // 2)):  # Assuming front ray is the middle one
-                    self.grid[grid_x][grid_y] = BLUE  # Mark the ray directly in front as blue
+               # if ray_num == round((num_rays // 2)):  # Assuming front ray is the middle one
+                    #self.grid[grid_x][grid_y] = BLUE  # Mark the ray directly in front as blue
 
 
             else:
