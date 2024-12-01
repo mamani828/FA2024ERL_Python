@@ -1,6 +1,8 @@
 import sys
 import os
 import yaml
+import threading
+
 import pybullet as p
 import pybullet_data
 import numpy as np
@@ -17,14 +19,66 @@ from utils.SimulationObjects import Robot, Object
 
 SENSOR_CONFIG_PATH = os.path.join(os.path.dirname(__file__),
                                   'config/sensors.yaml')
-DEFAULT_GRID_SIZE = 200
+DEFAULT_GRID_SIZE = 50
 SIM_TIME_CONSTANT = 4  # How often the simulation is updated
-CAMERA_UPDATE_INTERVAL = 6
+CAMERA_UPDATE_INTERVAL = 10000
 MAX_RAY_NUMBER = 75
 MAX_START_ANGLE = 360
 MAX_END_ANGLE = 360
 MAX_RAY_LENGTH = 10
 
+
+class CubeCreator:
+    def __init__(self):
+        self.cube_count = 0
+        self.button_id = p.addUserDebugParameter("Create Cube", 1, 0, 1)
+        self.prev_button_state = p.readUserDebugParameter(self.button_id)
+        self.create_info_text()
+
+    def create_info_text(self):
+        self.info_text_id = p.addUserDebugText(
+            text="Cubes created: 0",
+            textPosition=[0, 0, 3],
+            textColorRGB=[1, 1, 1],
+            textSize=1.5
+        )
+
+    def update_info_text(self):
+            p.addUserDebugText(
+                text=f"Cubes created: {self.cube_count}",
+                textPosition=[0, 0, 3],
+                textColorRGB=[1, 1, 1],
+                textSize=1.5,
+                replaceItemUniqueId=self.info_text_id
+            )
+
+    def check_cube_button(self):
+        current_button_state = p.readUserDebugParameter(self.button_id)
+        if current_button_state != self.prev_button_state:
+            self.create_new_cube()
+            self.cube_count += 1
+            self.update_info_text()
+            self.prev_button_state = current_button_state
+
+    @staticmethod
+    def create_new_cube():
+        cube_size = 0.3
+        x = np.random.normal(0, 4)
+        y = np.random.normal(0, 4)
+        position = [x, y, cube_size/2]
+        orientation = p.getQuaternionFromEuler([0, 0, 0])
+        color = list(np.random.uniform(0, 1, 3)) + [1]
+        visual_shape = p.createVisualShape(shapeType=p.GEOM_BOX,
+                                        halfExtents=[cube_size/2]*3,
+                                        rgbaColor=color)
+
+        collision_shape = p.createCollisionShape(shapeType=p.GEOM_BOX,
+                                                halfExtents=[cube_size/2]*3)
+
+        p.createMultiBody(baseMass=1, baseVisualShapeIndex=visual_shape,
+                        baseCollisionShapeIndex=collision_shape,
+                        basePosition=position,
+                        baseOrientation=orientation)
 
 class SimulationApp(QMainWindow):
     def __init__(self):
@@ -32,6 +86,7 @@ class SimulationApp(QMainWindow):
         self.init_ui()
         self.init_simulation()
         self.init_debug_sliders()
+        self.init_cube_creator()
         #self.slider_ui()
         #self.initMap()
         self.simulation_running = True
@@ -62,6 +117,7 @@ class SimulationApp(QMainWindow):
         self.lidar.setup()
 
         self.counter = 0
+        
 
     def init_ui(self):
         self.setWindowTitle("PyBullet + PyQt6 Simulation")
@@ -84,7 +140,6 @@ class SimulationApp(QMainWindow):
 
         # Robot map
         self.robot_map = RobotMap(DEFAULT_GRID_SIZE)
-        self.robot_map.setFixedSize(640, 640)
         layout.addWidget(self.robot_map)
 
     def slider_ui(self):
@@ -130,6 +185,10 @@ class SimulationApp(QMainWindow):
             p.addUserDebugParameter("ray length", 0, MAX_RAY_LENGTH, self.lidar.ray_len)
         )
 
+    def init_cube_creator(self):
+        self.cube_creator = CubeCreator()
+        self.cube_creator.create_info_text()
+
     def read_debug_sliders(self):
         self.gui_values = {
             "num_rays": int(p.readUserDebugParameter(self.sliders[0])),
@@ -148,10 +207,9 @@ class SimulationApp(QMainWindow):
     def update_camera(self):
         self.camera_counter += 1
 
-            # Update camera sensor at specified intervals
+        # Update camera sensor at specified intervals
         if self.camera_counter % CAMERA_UPDATE_INTERVAL == 0:
-                view_matrix = self.camera.update_sensor()
-                #width, height, rgb, depth, seg = p.getCameraImage(640, 480, viewMatrix=view_matrix)  # Lower resolution
+            self.camera.update_sensor()
 
     def toggle_simulation(self):
         if self.simulation_running:
@@ -171,9 +229,9 @@ class SimulationApp(QMainWindow):
     def update_simulation(self):
         # Step PyBullet simulation
         p.stepSimulation()
-        
-        # Update camera data
-        view_matrix = self.camera.update_sensor()
+
+        self.read_debug_sliders()
+        self.lidar.gui_change_parameter(**self.gui_values)
 
         # Update LiDAR data
         rays_data, dists, coords  = self.lidar.retrieve_data(common=False)
@@ -193,15 +251,14 @@ class SimulationApp(QMainWindow):
         self.visualization_label.setPixmap(pixmap)
         """
 
-        if (self.counter == 240):
+        if (self.counter == 15):
             self.robot_map.calculate_matrix(robot_pos, coords)
             self.counter = 0
         
         self.counter += 1
-
-        self.read_debug_sliders()
-        self.lidar.gui_change_parameter(**self.gui_values)
-        self.update_camera()
+        self.lidar.simulate(rays_data)
+        #self.update_camera()
+        self.cube_creator.check_cube_button()
 
     @staticmethod
     def open_yaml(config_name):
@@ -211,6 +268,9 @@ class SimulationApp(QMainWindow):
         except FileNotFoundError:
             print("Config file not found!")
             sys.exit(0)
+
+
+
 
 
 if __name__ == "__main__":
