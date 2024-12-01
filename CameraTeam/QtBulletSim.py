@@ -26,6 +26,8 @@ MAX_RAY_NUMBER = 75
 MAX_START_ANGLE = 360
 MAX_END_ANGLE = 360
 MAX_RAY_LENGTH = 10
+WALL_MASS = 0  # Mass of 0 to make the wall static
+WALL_COLOR = [0.7, 0.7, 0.7, 1]  # Gray color for the wall
 
 
 class CubeCreator:
@@ -102,6 +104,15 @@ class SimulationApp(QMainWindow):
         orientation = [0, 0, 0]  # Euler Angles Roll, Pitch, Yaw
         initial_orientation = p.getQuaternionFromEuler(orientation)  # Converting to Quaternion
         self.plane_id = p.loadURDF("plane.urdf", coordinates, initial_orientation)
+      
+
+     # First, create an instance of the Object class
+        object_instance = Object(coordinates=[5, 0, 1], color=[1, 0, 0, 1])  # Example object (coordinates, color)
+
+# Now, call the create_wall method on that instance
+        WALL_SIZE = [0.2, 5, 1]  # Wall dimensions (length, width, height)
+        wall1 = object_instance.create_wall(position=[2, 0, 0], WALL_SIZE=WALL_SIZE, WALL_COLOR=WALL_COLOR)
+        wall2 = object_instance.create_wall(position=[-2, 0, 0], WALL_SIZE=WALL_SIZE, WALL_COLOR=WALL_COLOR)
 
         self.robot = Robot()
         self.robot_id = self.robot()

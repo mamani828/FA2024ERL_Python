@@ -5,7 +5,7 @@ BOX_MASS = 50
 FORCE = 1
 STEERING_ANGLE = 0.5
 MAX_VELOCITY = 10
-
+WALL_MASS = 0  # Mass of 0 to make the wall static
 
 class Robot:
     """
@@ -114,7 +114,7 @@ class Object:
         """
         self.color = color
         self.coordinates = coordinates
-        self.object_id = self.loading_box()  # Storing the object's ID
+        #self.object_id = self.loading_box()  # Storing the object's ID
 
     def loading_box(self):
         """
@@ -137,3 +137,26 @@ class Object:
                                  baseVisualShapeIndex=box_visual_shape,
                                  basePosition=box_coordinates,
                                  baseOrientation=initial_box_orientation)
+    def create_wall(self, position, WALL_SIZE, WALL_COLOR):
+        """
+        Create a wall in the PyBullet environment.
+        
+        :param position: The position (x, y, z) where the wall will be placed.
+        :param size: The size (length, width, height) of the wall. Defaults to WALL_SIZE.
+        :param color: The color of the wall. Defaults to WALL_COLOR.
+        :return: The ID of the wall object created in the simulation.
+        """
+        size = WALL_SIZE
+        color = WALL_COLOR
+        # Create a box collision shape for the wall
+        
+        wall_collision_shape = p.createCollisionShape(shapeType=p.GEOM_BOX, halfExtents=[size[0]/2, size[1]/2, size[2]/2])
+        
+        # Create a box visual shape for the wall
+        wall_visual_shape = p.createVisualShape(shapeType=p.GEOM_BOX, halfExtents=[size[0]/2, size[1]/2, size[2]/2], rgbaColor=color)
+        
+        # Create the wall as a static body (no movement)
+        wall_id = p.createMultiBody(baseMass=WALL_MASS, baseCollisionShapeIndex=wall_collision_shape, 
+                                    baseVisualShapeIndex=wall_visual_shape, basePosition=position)
+        
+        return wall_id
