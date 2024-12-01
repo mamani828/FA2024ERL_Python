@@ -14,9 +14,6 @@ class Sensor(ABC):
 
     Note: Feel free to add or remove methods in this class. Also,
     do not use this class until later.
-
-    Args:
-        ABC (Class):
     """
     @abstractmethod
     def __init__(self):
@@ -55,8 +52,8 @@ class Sensor(ABC):
 
 class Camera:
     """
-        Camera sensor that is attached to the car. Provides visual feedback
-        as to what the car currently sees.
+    Camera sensor that is attached to the car. Provides visual feedback
+    as to what the car currently sees.
     """
     def __init__(self, target_robot: int, config: dict) -> None:
         """
@@ -80,12 +77,13 @@ class Camera:
 
     def update_sensor(self) -> list:
         """
-        Computes the current view_matrix of the camera.
+        Computes the current view_matrix of the camera and updates
+        the synthetic camera on the PyBullet simulation.
 
         Args:
             None.
         Returns:
-            view_matrix:
+            None.
         Raises:
             None.
         """
@@ -96,7 +94,8 @@ class Camera:
         camera_pos = [robot_pos[0] - self.CAMERA_DISTANCE, robot_pos[1], robot_pos[2] + 0.5]
         view_matrix = p.computeViewMatrix(camera_pos, robot_pos, [0, 0, 1])
 
-        return view_matrix
+        width, height, rgb_img, depth_img, seg_img = \
+            p.getCameraImage(640, 480, viewMatrix=view_matrix)
 
 
 #  Note: Imported from main GitHub. Modify as needed.
@@ -142,7 +141,7 @@ class Lidar:
 
     def setup(self):
         """
-        Default setup for when lidar object is just built
+        Setup function that computes the debug lines for lidar.
         """
         a = self.start_angle*(math.pi/180)
         b = (self.end_angle - self.start_angle)*(math.pi/180)

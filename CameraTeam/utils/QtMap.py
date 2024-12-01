@@ -5,11 +5,10 @@ from PyQt6.QtGui import QPainter, QColor
 from PyQt6.QtCore import Qt, QTimer
 
 
-
 COLOR_MAP = {0: QColor("white"), 1: QColor("black"),
              2: QColor("red"), 3: QColor("blue")}
-DEFAULT_SCALE = 2  # Scale from PyBullet to map
-CELL_SIZE = 3  # Pixel length/width of each cell
+DEFAULT_SCALE = 1  # Scale from PyBullet to map
+CELL_SIZE = 20  # Pixel length/width of each cell
 WHITE = 0
 BLACK = 1
 RED = 2
@@ -21,7 +20,7 @@ class RobotMap(QWidget):
         super().__init__()
         # Constants
         self.GRID_SIZE = grid_size
-        self.OFFSET = grid_size // 2
+        self.OFFSET = grid_size // 4
 
         self.grid = np.zeros((grid_size, grid_size), dtype=int)
         self.robot_x = 0
@@ -36,12 +35,11 @@ class RobotMap(QWidget):
 
     def calculate_matrix(self, robot_pos, ray_pos, distance=None, scaling_factor=DEFAULT_SCALE):
         #  Sets previous robot position to white
-        robot_grid_x = int(self.robot_x // scaling_factor)
-        robot_grid_y = int(self.robot_y // scaling_factor)
-        self.grid[robot_grid_x][robot_grid_y] = WHITE
-        print(self.grid[robot_grid_x][robot_grid_y])
+        prev_robot_grid_x = int(self.robot_x // scaling_factor) + self.OFFSET
+        prev_robot_grid_y = int(self.robot_y // scaling_factor) + self.OFFSET
+        self.grid[prev_robot_grid_x][prev_robot_grid_y] = WHITE
 
-        #  Gets new robot position and sets color in map
+        # Get new robot position and set color in map
         self.robot_x, self.robot_y, _ = robot_pos
         robot_grid_x = int(self.robot_x // scaling_factor) + self.OFFSET
         robot_grid_y = int(self.robot_y // scaling_factor) + self.OFFSET
