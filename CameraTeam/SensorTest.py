@@ -89,7 +89,7 @@ if __name__ == "__main__":
     target_object = Object([2, 2, 2], [1, 0, 0, 1])  # Spawning box after initializing PybulletSim
 
     camera_config = open_yaml("camera_configs")
-    camera = Camera(robot, camera_config)
+    camera = Camera(robot.robot_id, camera_config)
 
     lidar_config = open_yaml("lidar_configs")
     lidar = Lidar(robot, lidar_config)
@@ -108,12 +108,12 @@ if __name__ == "__main__":
             # Update camera sensor at specified intervals
             if camera_counter % camera_update_interval == 0:
                 view_matrix = camera.update_sensor()
-                width, height, rgb, depth, seg = p.getCameraImage(640, 480, viewMatrix=view_matrix)  # Lower resolution
+                #width, height, rgb, depth, seg = p.getCameraImage(640, 480, viewMatrix=view_matrix)  # Lower resolution
 
             # Lidar processing
             ray_data, dists, coords = lidar.retrieve_data(common=False)
             lidar.simulate(ray_data)
-            robot_pos, robot_orn = p.getBasePositionAndOrientation(robot.robot_id)
+            #robot_pos, robot_orn = p.getBasePositionAndOrientation(robot.robot_id)
             #map = RobotMap(200)
             #map.calculate_matrix(robot_pos, coords, dists)
             #map.update_map()
