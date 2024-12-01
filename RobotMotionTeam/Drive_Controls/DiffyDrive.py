@@ -48,10 +48,13 @@ class PybulletEnvironment:
         self.goalPointX=p.addUserDebugParameter("Goal Point X", -50, 50, 0)
         self.goalPointY=p.addUserDebugParameter("Goal Point Y", -50, 50, 0)
         
-        self.kp=p.addUserDebugParameter("kp", -10, 10, 8) 
-        self.ki=p.addUserDebugParameter("ki", -10, 10, 0)
-        self.kd=p.addUserDebugParameter("kd", -10, 10, 0.5)
+        self.kp_linear=p.addUserDebugParameter("kp-linear", -10, 10, 8) 
+        self.ki_linear=p.addUserDebugParameter("ki-linear", -10, 10, 0)
+        self.kd_linear=p.addUserDebugParameter("kd-linear", -10, 10, 0.5)
         
+        self.kp_angular=p.addUserDebugParameter("kp-angular", -10, 10, 8) 
+        self.ki_angular=p.addUserDebugParameter("ki-angular", -10, 10, 0)
+        self.kd_angular=p.addUserDebugParameter("kd-angular", -10, 10, 0.5)
         #Add debug sliders for each control point (X, Y, Z)
         self.sliders = []
         for i, cp in enumerate(self.path.control_points):
@@ -72,6 +75,7 @@ class PybulletEnvironment:
         
         # initializing pid and its corresponding plot
         self.linear_pid=PID(kp=1.0, ki=0, kd=0.01)
+        self.angular_pid=PID(kp=1.0, ki=0, kd=0.01)
         # self.linear_pid.init_pid_plot()
         
         while True:
@@ -98,10 +102,10 @@ class PybulletEnvironment:
                 
                 # calculate with pid
                 self.linear_velocity=self.linear_pid.calculateVelocity(self.x_error)
-                
+                self.angular_velocity=self.angular_pid.calculateVelocity(self.h_error)
                 
                 # setting the velocities
-                self.jackal_robot.inverse_kinematics(self.linear_velocity,self.h_error)
+                self.jackal_robot.inverse_kinematics(self.linear_velocity,self.angular_velocity)
                 self.jackal_robot.setVelocity()
                 
                 
@@ -114,7 +118,7 @@ class PybulletEnvironment:
                 
                 #logging data
                 logging.info(f"Position: {', '.join(str(i) for i in self.jackal_robot.position)}, Errors: X={self.x_error}, Y={self.y_error}, "
-                             f"Velocities: X={self.linear_velocity}, Heading={self.h_error}, PID: KP={self.kp}, KI={self.ki}, KD={self.kd}")
+                             f"Velocities: X={self.linear_velocity}, Heading={self.h_error}")
 
                 
 
@@ -131,7 +135,8 @@ class PybulletEnvironment:
             
             self.x_goal=p.readUserDebugParameter(self.goalPointX)
             self.y_goal=p.readUserDebugParameter(self.goalPointY)
-            self.linear_pid.update(float(p.readUserDebugParameter(self.kp)),float(p.readUserDebugParameter(self.ki)),float(p.readUserDebugParameter(self.kd)))
+            self.linear_pid.update(float(p.readUserDebugParameter(self.kp_linear)),float(p.readUserDebugParameter(self.ki_linear)),float(p.readUserDebugParameter(self.kd_linear)))
+            self.angular_pid.update(float(p.readUserDebugParameter(self.kp_angular)),float(p.readUserDebugParameter(self.ki_angular)),float(p.readUserDebugParameter(self.kd_angular)))
         except:
             print("Read failed")
             return

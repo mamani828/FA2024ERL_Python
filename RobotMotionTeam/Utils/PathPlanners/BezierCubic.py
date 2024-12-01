@@ -33,12 +33,11 @@ class Bezier:
         return (1 - t)**3 * cp[0] + 3 * (1 - t)**2 * t * cp[1] + 3 * (1 - t) * t**2 * cp[2] + t**3 * cp[3]
     def update_control_points(self):
         """Updates the control points based on the slider values."""
-        print(self.sliders)
         for i, slider in enumerate(self.sliders):
             control_point_idx = i // 3  # Each control point has 3 sliders (X, Y, Z)
             axis_idx = i % 3  # 0 for X, 1 for Y, 2 for Z
             value = self.p.readUserDebugParameter(slider)
             self.control_points[control_point_idx][axis_idx] = value
-        
+
     def update_sliders(self,sliders):
         self.sliders=sliders
