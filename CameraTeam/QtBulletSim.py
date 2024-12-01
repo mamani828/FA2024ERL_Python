@@ -51,11 +51,11 @@ class SimulationApp(QMainWindow):
         self.plane_id = p.loadURDF("plane.urdf", coordinates, initial_orientation)
 
         self.robot = Robot()
-
+        self.robot_id = self.robot()
         camera_config = SimulationApp.open_yaml("camera_configs")
         lidar_config = SimulationApp.open_yaml("lidar_configs")
 
-        self.camera = Camera(self.robot, camera_config)
+        self.camera = Camera(self.robot_id, camera_config)
         self.camera_counter = 0
         
         self.lidar = Lidar(self.robot, lidar_config)

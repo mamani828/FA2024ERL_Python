@@ -4,8 +4,8 @@ import pybullet as p
 class Robot:
     def __init__(self):
         self.robot_id = 1
-        self.loading_robot()
-
+        x =self.loading_robot()
+       
     def loading_robot(self):
         # Set initial coordinates and orientation for r2d2
         racecar_coordinates = [0, 0, 0.5]  # Make sure it's on level ground
@@ -14,6 +14,10 @@ class Robot:
         racecar = p.loadURDF("racecar/racecar.urdf", racecar_coordinates,
                              initial_racecar_orientation, useFixedBase=False)
         self.robot_id = racecar  # Set robot_id to id returned by loadURDF
+    def __call__(self):
+        # Return the robot_id when the class instance is called
+        return self.robot_id
+     
 
 
 class Object:
