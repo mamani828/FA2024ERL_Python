@@ -31,6 +31,9 @@ class Bezier:
         """Computes a point on the Bezier curve at parameter t."""
         cp = self.control_points
         return (1 - t)**3 * cp[0] + 3 * (1 - t)**2 * t * cp[1] + 3 * (1 - t) * t**2 * cp[2] + t**3 * cp[3]
+    
+    
+
     def update_control_points(self):
         """Updates the control points based on the slider values."""
         for i, slider in enumerate(self.sliders):
@@ -41,3 +44,12 @@ class Bezier:
 
     def update_sliders(self,sliders):
         self.sliders=sliders
+        
+    def get_Path(self,length=200):
+        iteration=1/length
+        self.path=[]
+        time=0
+        while(time<=1):
+            self.path.append(self.get_bezier_curve(time))
+            time+=iteration
+        return self.path
