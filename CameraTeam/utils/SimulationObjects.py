@@ -1,6 +1,10 @@
 import pybullet as p
 
+
 BOX_MASS = 50
+FORCE = 1
+STEERING_ANGLE = 0.5
+MAX_VELOCITY = 10
 
 
 class Robot:
@@ -11,6 +15,8 @@ class Robot:
     """
     def __init__(self):
         self.robot_id = None
+        self.wheel_indices = []
+        self.steering_indices = []
         self.load_robot()
 
     def load_robot(self):
@@ -18,17 +24,64 @@ class Robot:
         Loads the racecar.urdf file and sets the returned ID to
         self.robot_id.
         """
-        self.robot_id = 1
-        x =self.loading_robot()
-       
-    def loading_robot(self):
-        # Set initial coordinates and orientation for r2d2
         racecar_coordinates = [0, 0, 0.5]  # Make sure it's on level ground
         racecar_orientation = [0, 0, 0]  # Neutral orientation (Euler Angles)
         initial_racecar_orientation = p.getQuaternionFromEuler(racecar_orientation)  # Quaternions
         self.robot_id = p.loadURDF("racecar/racecar.urdf", racecar_coordinates,
                              initial_racecar_orientation, useFixedBase=False)
-        #self.robot_id = racecar  # Set robot_id to id returned by loadURDF
+
+        num_joints = p.getNumJoints(self.robot_id)
+        for joint_index in range(num_joints):
+            joint_info = p.getJointInfo(self.robot_id, joint_index)
+            joint_name = joint_info[1].decode("utf-8")
+            if "wheel" in joint_name:
+                self.wheel_indices.append(joint_index)
+            elif "steering" in joint_name:
+                self.steering_indices.append(joint_index)
+    
+    def move(self, key):
+        """
+        Moves the robot based on key presses (W, A, S, D).
+        W: Forward
+        S: Backward
+        A: Turn Left
+        D: Turn Right
+        """
+        force = FORCE
+        steer_angle = STEERING_ANGLE
+
+        if key == "W":
+            # Apply forward force to all wheels
+            for wheel in self.wheel_indices:
+                p.setJointMotorControl2(self.robot_id, wheel, p.VELOCITY_CONTROL,
+                                        targetVelocity=MAX_VELOCITY, force=force)
+        elif key == "S":
+            # Apply backward force to all wheels
+            for wheel in self.wheel_indices:
+                p.setJointMotorControl2(self.robot_id, wheel, p.VELOCITY_CONTROL,
+                                        targetVelocity=-MAX_VELOCITY, force=force)
+        elif key == "A":
+            # Turn left by adjusting steering joints
+            for steering in self.steering_indices:
+                p.setJointMotorControl2(self.robot_id, steering, p.POSITION_CONTROL,
+                                        targetPosition=steer_angle)
+        elif key == "D":
+            # Turn right by adjusting steering joints
+            for steering in self.steering_indices:
+                p.setJointMotorControl2(self.robot_id, steering, p.POSITION_CONTROL,
+                                        targetPosition=-steer_angle)
+
+    def stop(self):
+        """
+        Stops the robot's movement.
+        """
+        for wheel in self.wheel_indices:
+            p.setJointMotorControl2(self.robot_id, wheel, p.VELOCITY_CONTROL,
+                                    targetVelocity=0, force=0)
+        for steering in self.steering_indices:
+            p.setJointMotorControl2(self.robot_id, steering, p.POSITION_CONTROL,
+                                    targetPosition=0)
+
     def __call__(self):
         # Return the robot_id when the class instance is called
         return self.robot_id

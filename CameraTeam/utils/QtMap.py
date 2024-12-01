@@ -7,8 +7,8 @@ from PyQt6.QtCore import Qt, QTimer
 
 COLOR_MAP = {0: QColor("white"), 1: QColor("black"),
              2: QColor("red"), 3: QColor("blue")}
-DEFAULT_SCALE = 1  # Scale from PyBullet to map
-CELL_SIZE = 20  # Pixel length/width of each cell
+DEFAULT_SCALE = 0.5  # Scale from PyBullet to map
+CELL_SIZE = 10  # Pixel length/width of each cell
 WHITE = 0
 BLACK = 1
 RED = 2
@@ -33,7 +33,7 @@ class RobotMap(QWidget):
         """Update the grid and trigger a repaint."""
         self.update()
 
-    def calculate_matrix(self, robot_pos, ray_pos, distance=None, scaling_factor=DEFAULT_SCALE):
+    def first_calculate_matrix(self, robot_pos, ray_pos, distance=None, scaling_factor=DEFAULT_SCALE):
         #  Sets previous robot position to white
         prev_robot_grid_x = int(self.robot_x // scaling_factor) + self.OFFSET
         prev_robot_grid_y = int(self.robot_y // scaling_factor) + self.OFFSET
@@ -57,7 +57,14 @@ class RobotMap(QWidget):
                 self.grid[int(grid_x)][int(grid_y)] = BLACK
 
         self.update_map()
-        
+
+    def second_calculate_matrix(self, robot_pos, ray_pos, distance, scaling_factor=DEFAULT_SCALE):
+        # Accounts for moving objects
+        pass
+
+    def third_calculate_matrix(self, robot_pos, ray_pos, distance, scaling_factor=DEFAULT_SCALE):
+        # Uses bressenham
+        pass
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -73,3 +80,7 @@ class RobotMap(QWidget):
                     CELL_SIZE,
                     CELL_SIZE,
                 )
+
+    def reset_map(self):
+        self.grid = np.zeros((self.GRID_SIZE, self.GRID_SIZE), dtype=int)
+        self.update_map()

@@ -19,9 +19,9 @@ from utils.SimulationObjects import Robot, Object
 
 SENSOR_CONFIG_PATH = os.path.join(os.path.dirname(__file__),
                                   'config/sensors.yaml')
-DEFAULT_GRID_SIZE = 50
+DEFAULT_GRID_SIZE = 100
 SIM_TIME_CONSTANT = 4  # How often the simulation is updated
-CAMERA_UPDATE_INTERVAL = 100
+CAMERA_UPDATE_INTERVAL = 30
 MAX_RAY_NUMBER = 75
 MAX_START_ANGLE = 360
 MAX_END_ANGLE = 360
@@ -85,8 +85,6 @@ class SimulationApp(QMainWindow):
         super().__init__()
         self.init_ui()
         self.init_simulation()
-        self.init_debug_sliders()
-        self.init_cube_creator()
         #self.slider_ui()
         #self.initMap()
         self.simulation_running = True
@@ -107,23 +105,29 @@ class SimulationApp(QMainWindow):
 
         self.robot = Robot()
         self.robot_id = self.robot()
+
         camera_config = SimulationApp.open_yaml("camera_configs")
         lidar_config = SimulationApp.open_yaml("lidar_configs")
 
         self.camera = Camera(self.robot_id, camera_config)
-        self.camera_counter = 0
+        
         
         self.lidar = Lidar(self.robot, lidar_config)
+
+        self.lidar.setup()
+        
+
+        self.camera_counter = 0
+        self.map_counter = 0
         self.gui_values = {
             "num_rays": int(lidar_config["num_rays"]),
             "start_angle": int(lidar_config["lidar_angle1"]),
             "end_angle": int(lidar_config["lidar_angle2"]),
             "ray_len": int(lidar_config["ray_len"]),
         }
-        self.lidar.setup()
 
-        self.counter = 0
-        
+        self.init_debug_sliders()
+        self.init_cube_creator()
 
     def init_ui(self):
         self.setWindowTitle("PyBullet + PyQt6 Simulation")
@@ -224,11 +228,12 @@ class SimulationApp(QMainWindow):
             self.timer.stop()
             self.store_camera_data()
             self.physicsClient = p.disconnect(self.physicsClient)
+            self.robot_map.reset_map()
             self.simulation_running = False
             self.toggle_button.setText("Start Simulation")
         else:
             self.timer.start(SIM_TIME_CONSTANT)
-            self.initSim()
+            self.init_simulation()
             p.resetDebugVisualizerCamera(self.cam_distance, self.cam_yaw,
                                          self.cam_pitch, self.cam_target_position)
             self.simulation_running = True
@@ -238,11 +243,15 @@ class SimulationApp(QMainWindow):
         # Step PyBullet simulation
         p.stepSimulation()
 
+        # Detect keypress for robot movement
+        self.keypress_detection()
+
+        # Read and changes LIDAR data
         self.read_debug_sliders()
         if self.oldparam != self.gui_values:
             self.lidar.gui_change_parameter(**self.gui_values)
 
-        # Update LiDAR data
+        # Update LIDAR data
         rays_data, dists, coords  = self.lidar.retrieve_data(common=False)
         robot_pos, robot_orn = p.getBasePositionAndOrientation(self.robot.robot_id)
 
@@ -260,14 +269,30 @@ class SimulationApp(QMainWindow):
         self.visualization_label.setPixmap(pixmap)
         """
 
-        if (self.counter == 15):
-            self.robot_map.calculate_matrix(robot_pos, coords)
-            self.counter = 0
+        if (self.map_counter == 15):
+            self.robot_map.first_calculate_matrix(robot_pos, coords)
+            self.map_counter = 0
         
-        self.counter += 1
+        self.map_counter += 1
         self.lidar.simulate(rays_data)
         self.view_matrix = self.update_camera()
         self.cube_creator.check_cube_button()
+
+    def keypress_detection(self):
+        """
+        Detects key presses and moves the robot accordingly.
+        """
+        keys = p.getKeyboardEvents()
+        if ord("w") in keys and keys[ord("w")] & p.KEY_IS_DOWN:
+            self.robot.move("W")
+        elif ord("s") in keys and keys[ord("s")] & p.KEY_IS_DOWN:
+            self.robot.move("S")
+        elif ord("a") in keys and keys[ord("a")] & p.KEY_IS_DOWN:
+            self.robot.move("A")
+        elif ord("d") in keys and keys[ord("d")] & p.KEY_IS_DOWN:
+            self.robot.move("D")
+        else:
+            self.robot.stop()
 
     @staticmethod
     def open_yaml(config_name):
@@ -277,9 +302,6 @@ class SimulationApp(QMainWindow):
         except FileNotFoundError:
             print("Config file not found!")
             sys.exit(0)
-
-
-
 
 
 if __name__ == "__main__":
