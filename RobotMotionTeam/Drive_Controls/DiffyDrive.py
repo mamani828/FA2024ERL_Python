@@ -76,7 +76,7 @@ class PybulletEnvironment:
         
         while True:
                 p.stepSimulation()
-                time.sleep(1.0 / 480.0)
+                time.sleep(1.0 / 240.0)
                 self.read_sliders()
         
             # Drive Control
