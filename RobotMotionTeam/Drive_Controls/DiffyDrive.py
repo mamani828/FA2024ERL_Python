@@ -5,6 +5,7 @@ import time
 import numpy as np
 import math
 from RobotMotionTeam import PID
+from RobotMotionTeam import Bezier
 # from RobotMotionTeam.Utils.Controllers.Pid import PID
 # from RobotMotionTeam.Utils.Controllers.PurePursuit import PurePursuit
 # Configure logging
@@ -31,18 +32,40 @@ class PybulletEnvironment:
         
         self.jackal_robot = Robot()
 
-        # Velocity position sliders
+        # Bezier Curve
+        self.path=Bezier(p)
+       
+        
+        self.create_sliders()
+        
+
+    def create_sliders(self):
+        # Velocity Sliders
         self.v_forward_slider = p.addUserDebugParameter("Linear Velocity", -50, 50, 0)
         self.v_angular_slider = p.addUserDebugParameter("Angular Velocity", -100, 100, 0)
         
         self.goalPointX=p.addUserDebugParameter("Goal Point X", -50, 50, 0)
         self.goalPointY=p.addUserDebugParameter("Goal Point Y", -50, 50, 0)
         
-        self.kp=p.addUserDebugParameter("kp", -10, 10, 8)
+        self.kp=p.addUserDebugParameter("kp", -10, 10, 8) 
         self.ki=p.addUserDebugParameter("ki", -10, 10, 0)
         self.kd=p.addUserDebugParameter("kd", -10, 10, 0.5)
-
-    
+        
+        #Add debug sliders for each control point (X, Y, Z)
+        self.sliders = []
+        for i, cp in enumerate(self.path.control_points):
+            self.sliders.append(
+                p.addUserDebugParameter(f"Control Point {i+1} X", -5, 5, cp[0])
+            )
+            self.sliders.append(
+                p.addUserDebugParameter(f"Control Point {i+1} Y", -5, 5, cp[1])
+            )
+            self.sliders.append(
+                p.addUserDebugParameter(f"Control Point {i+1} Z", -5, 5, cp[2])
+            )
+            
+            
+            
     def run_simulation(self, boolean = True):
         logging.info("Starting simulation...")
             
@@ -51,7 +74,7 @@ class PybulletEnvironment:
         
         while True:
                 p.stepSimulation()
-                time.sleep(1.0 / 240.0)
+                time.sleep(1.0 / 480.0)
                 self.read_sliders()
         
             # Drive Control
@@ -79,34 +102,12 @@ class PybulletEnvironment:
                 self.jackal_robot.inverse_kinematics(self.linear_velocity,self.h_error)
                 self.jackal_robot.setVelocity()
                 
-                print(self.jackal_robot.localize())
-                
+                self.path.draw_bezier_path()
                 logging.info(f"Position: {', '.join(str(i) for i in self.jackal_robot.position)}, Errors: X={self.x_error}, Y={self.y_error}, "
                              f"Velocities: X={self.linear_velocity}, Heading={self.h_error}, PID: KP={self.kp}, KI={self.ki}, KD={self.kd}")
 
                 
-                
 
-        # except KeyboardInterrupt:
-        #     logging.warning("Simulation stopped by user.")
-        # except Exception as e:
-        #     logging.error(f"Unexpected error: {e}")
-        # finally:
-        #     p.disconnect()
-        #     logging.info("Simulation ended.")
-
-    def update_info_text(self, x_velocity, y_velocity, position):
-        """
-        Update the debug text overlay with the current velocities and position.
-        """
-        text = f"Velocities: X={x_velocity:.2f}, Y={y_velocity:.2f}\nPosition: {position}"
-        p.addUserDebugText(
-            text=text,
-            textPosition=[0, 0, 3],
-            textColorRGB=[1, 1, 1],
-            textSize=1.5,
-            replaceItemUniqueId=self.info_text_id
-        )
     def angle_wrap(self,radians):
         while radians > math.pi:
             radians -= 2 * math.pi
@@ -122,7 +123,11 @@ class PybulletEnvironment:
             self.y_goal=p.readUserDebugParameter(self.goalPointY)
             self.linear_pid.update(float(p.readUserDebugParameter(self.kp)),float(p.readUserDebugParameter(self.ki)),float(p.readUserDebugParameter(self.kd)))
         except:
+            print("Read failed")
             return
+        
+        
+        
 class Robot:
     def __init__(self):
         self.robot_id = p.loadURDF("./RobotMotionTeam/urdf/jackal.urdf", basePosition=[0, 0, 0.2])
