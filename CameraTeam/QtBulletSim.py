@@ -21,7 +21,7 @@ SENSOR_CONFIG_PATH = os.path.join(os.path.dirname(__file__),
                                   'config/sensors.yaml')
 DEFAULT_GRID_SIZE = 50
 SIM_TIME_CONSTANT = 4  # How often the simulation is updated
-CAMERA_UPDATE_INTERVAL = 8
+CAMERA_UPDATE_INTERVAL = 100
 MAX_RAY_NUMBER = 75
 MAX_START_ANGLE = 360
 MAX_END_ANGLE = 360
@@ -114,6 +114,12 @@ class SimulationApp(QMainWindow):
         self.camera_counter = 0
         
         self.lidar = Lidar(self.robot, lidar_config)
+        self.gui_values = {
+            "num_rays": int(lidar_config["num_rays"]),
+            "start_angle": int(lidar_config["lidar_angle1"]),
+            "end_angle": int(lidar_config["lidar_angle2"]),
+            "ray_len": int(lidar_config["ray_len"]),
+        }
         self.lidar.setup()
 
         self.counter = 0
@@ -190,6 +196,8 @@ class SimulationApp(QMainWindow):
         self.cube_creator.create_info_text()
 
     def read_debug_sliders(self):
+        self.oldparam = self.gui_values
+        
         self.gui_values = {
             "num_rays": int(p.readUserDebugParameter(self.sliders[0])),
             "start_angle": p.readUserDebugParameter(self.sliders[1]),
@@ -231,7 +239,8 @@ class SimulationApp(QMainWindow):
         p.stepSimulation()
 
         self.read_debug_sliders()
-        self.lidar.gui_change_parameter(**self.gui_values)
+        if self.oldparam != self.gui_values:
+            self.lidar.gui_change_parameter(**self.gui_values)
 
         # Update LiDAR data
         rays_data, dists, coords  = self.lidar.retrieve_data(common=False)
