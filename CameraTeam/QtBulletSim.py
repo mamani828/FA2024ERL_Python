@@ -328,17 +328,31 @@ class SimulationApp(QMainWindow):
         Detects key presses and moves the robot accordingly.
         """
         keys = p.getKeyboardEvents()
-      
-        if ord("w") in keys and keys[ord("w")] & p.KEY_IS_DOWN:
+
+        w_pressed = (ord("w") in keys and keys[ord("w")] & p.KEY_IS_DOWN) or \
+                    (p.B3G_UP_ARROW in keys and keys[p.B3G_UP_ARROW] & p.KEY_IS_DOWN)
+
+        s_pressed = (ord("s") in keys and keys[ord("s")] & p.KEY_IS_DOWN) or \
+                    (p.B3G_DOWN_ARROW in keys and keys[p.B3G_DOWN_ARROW] & p.KEY_IS_DOWN)
+
+        a_pressed = (ord("a") in keys and keys[ord("a")] & p.KEY_IS_DOWN) or \
+                    (p.B3G_LEFT_ARROW in keys and keys[p.B3G_LEFT_ARROW] & p.KEY_IS_DOWN)
+
+        d_pressed = (ord("d") in keys and keys[ord("d")] & p.KEY_IS_DOWN) or \
+                    (p.B3G_RIGHT_ARROW in keys and keys[p.B3G_RIGHT_ARROW] & p.KEY_IS_DOWN)
+        if w_pressed and not s_pressed:
             self.robot.move("W")
-        elif ord("s") in keys and keys[ord("s")] & p.KEY_IS_DOWN:
+        elif s_pressed and not w_pressed:
             self.robot.move("S")
-        elif ord("a") in keys and keys[ord("a")] & p.KEY_IS_DOWN:
+        else:
+            self.robot.stop_motion()
+
+        if a_pressed:
             self.robot.move("A")
-        elif ord("d") in keys and keys[ord("d")] & p.KEY_IS_DOWN:
+        elif d_pressed:
             self.robot.move("D")
         else:
-            self.robot.stop()
+            self.robot.stop_angle()
 
     @staticmethod
     def open_yaml(config_name):

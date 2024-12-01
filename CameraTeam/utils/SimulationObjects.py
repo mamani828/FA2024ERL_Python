@@ -76,13 +76,18 @@ class Robot:
                 p.setJointMotorControl2(self.robot_id, steering, p.POSITION_CONTROL,
                                         targetPosition=-steer_angle)
 
-    def stop(self):
+    def stop_motion(self):
         """
         Stops the robot's movement.
         """
         for wheel in self.wheel_indices:
             p.setJointMotorControl2(self.robot_id, wheel, p.VELOCITY_CONTROL,
                                     targetVelocity=0, force=0)
+        
+    def stop_angle(self):
+        """
+        Resets the angle to zero.
+        """
         for steering in self.steering_indices:
             p.setJointMotorControl2(self.robot_id, steering, p.POSITION_CONTROL,
                                     targetPosition=0)
