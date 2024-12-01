@@ -32,13 +32,14 @@ class PybulletEnvironment:
         
         self.jackal_robot = Robot()
 
-        # Bezier Curve
-        self.path=Bezier(p)
-       
-        
-        self.create_sliders()
-        
 
+        self.sliders=[]
+        self.path=Bezier(p,self.sliders)    
+        self.create_sliders()
+        self.path.update_sliders(self.sliders)
+        
+        
+        
     def create_sliders(self):
         # Velocity Sliders
         self.v_forward_slider = p.addUserDebugParameter("Linear Velocity", -50, 50, 0)
@@ -68,9 +69,10 @@ class PybulletEnvironment:
             
     def run_simulation(self, boolean = True):
         logging.info("Starting simulation...")
-            
-        self.linear_pid=PID(kp=1.0, ki=0, kd=0.01)
         
+        # initializing pid and its corresponding plot
+        self.linear_pid=PID(kp=1.0, ki=0, kd=0.01)
+        # self.linear_pid.init_pid_plot()
         
         while True:
                 p.stepSimulation()
@@ -102,7 +104,15 @@ class PybulletEnvironment:
                 self.jackal_robot.inverse_kinematics(self.linear_velocity,self.h_error)
                 self.jackal_robot.setVelocity()
                 
+                
+                
+                # Bezier Curve mapping
+                self.path.update_control_points()
                 self.path.draw_bezier_path()
+                
+                
+                
+                #logging data
                 logging.info(f"Position: {', '.join(str(i) for i in self.jackal_robot.position)}, Errors: X={self.x_error}, Y={self.y_error}, "
                              f"Velocities: X={self.linear_velocity}, Heading={self.h_error}, PID: KP={self.kp}, KI={self.ki}, KD={self.kd}")
 

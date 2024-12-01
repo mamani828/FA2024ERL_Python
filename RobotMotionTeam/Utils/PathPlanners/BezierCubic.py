@@ -1,6 +1,6 @@
 import numpy as np
 class Bezier:
-    def __init__(self,p):
+    def __init__(self,p, sliders):
         self.control_points=[
             np.array([0, 0, 0.2]),
             np.array([2, 1, 0.2]),
@@ -9,7 +9,7 @@ class Bezier:
         ]
         self.p=p
         self.t=0
-        
+        self.sliders=sliders
         # draw initial pinpoints
         self.sphere_ids = [
             p.createMultiBody(baseCollisionShapeIndex=p.createCollisionShape(p.GEOM_SPHERE, radius=0.1),
@@ -31,3 +31,14 @@ class Bezier:
         """Computes a point on the Bezier curve at parameter t."""
         cp = self.control_points
         return (1 - t)**3 * cp[0] + 3 * (1 - t)**2 * t * cp[1] + 3 * (1 - t) * t**2 * cp[2] + t**3 * cp[3]
+    def update_control_points(self):
+        """Updates the control points based on the slider values."""
+        print(self.sliders)
+        for i, slider in enumerate(self.sliders):
+            control_point_idx = i // 3  # Each control point has 3 sliders (X, Y, Z)
+            axis_idx = i % 3  # 0 for X, 1 for Y, 2 for Z
+            value = self.p.readUserDebugParameter(slider)
+            self.control_points[control_point_idx][axis_idx] = value
+        
+    def update_sliders(self,sliders):
+        self.sliders=sliders
