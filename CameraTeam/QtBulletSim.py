@@ -21,7 +21,8 @@ SENSOR_CONFIG_PATH = os.path.join(os.path.dirname(__file__),
                                   'config/sensors.yaml')
 DEFAULT_GRID_SIZE = 100
 SIM_TIME_CONSTANT = 4  # How often the simulation is updated
-CAMERA_UPDATE_INTERVAL = 30
+SYNTH_CAMERA_UPDATE_INTERVAL = 30
+DEBUG_CAMERA_UPDATE_INTERVAL = 10
 MAX_RAY_NUMBER = 75
 MAX_START_ANGLE = 360
 MAX_END_ANGLE = 360
@@ -54,7 +55,7 @@ class CubeCreator:
                 replaceItemUniqueId=self.info_text_id
             )
 
-    def check_cube_button(self):
+    def update_cube_button(self):
         current_button_state = p.readUserDebugParameter(self.button_id)
         if current_button_state != self.prev_button_state:
             self.create_new_cube()
@@ -109,7 +110,7 @@ class SimulationApp(QMainWindow):
      # First, create an instance of the Object class
         object_instance = Object(coordinates=[5, 0, 1], color=[1, 0, 0, 1])  # Example object (coordinates, color)
 
-# Now, call the create_wall method on that instance
+        # Now, call the create_wall method on that instance
         WALL_SIZE = [0.2, 5, 1]  # Wall dimensions (length, width, height)
         wall1 = object_instance.create_wall(position=[2, 0, 0], WALL_SIZE=WALL_SIZE, WALL_COLOR=WALL_COLOR)
         wall2 = object_instance.create_wall(position=[-2, 0, 0], WALL_SIZE=WALL_SIZE, WALL_COLOR=WALL_COLOR)
@@ -120,7 +121,7 @@ class SimulationApp(QMainWindow):
         camera_config = SimulationApp.open_yaml("camera_configs")
         lidar_config = SimulationApp.open_yaml("lidar_configs")
 
-        self.camera = Camera(self.robot_id, camera_config)
+        self.synth_cam = Camera(self.robot_id, camera_config)
         
         
         self.lidar = Lidar(self.robot, lidar_config)
@@ -128,8 +129,9 @@ class SimulationApp(QMainWindow):
         self.lidar.setup()
         
 
-        self.camera_counter = 0
+        self.synth_cam_counter = 0
         self.map_counter = 0
+        self.debug_cam_counter = 0
         self.gui_values = {
             "num_rays": int(lidar_config["num_rays"]),
             "start_angle": int(lidar_config["lidar_angle1"]),
@@ -139,6 +141,7 @@ class SimulationApp(QMainWindow):
 
         self.init_debug_sliders()
         self.init_cube_creator()
+        self.store_camera_data()
 
     def init_ui(self):
         self.setWindowTitle("PyBullet + PyQt6 Simulation")
@@ -212,7 +215,7 @@ class SimulationApp(QMainWindow):
 
     def read_debug_sliders(self):
         self.oldparam = self.gui_values
-        
+
         self.gui_values = {
             "num_rays": int(p.readUserDebugParameter(self.sliders[0])),
             "start_angle": p.readUserDebugParameter(self.sliders[1]),
@@ -227,12 +230,23 @@ class SimulationApp(QMainWindow):
         self.cam_yaw = camera_state[8]               # Yaw angle
         self.cam_pitch = camera_state[9]             # Pitch angle
 
-    def update_camera(self):
-        self.camera_counter += 1
+    def update_synth_camera(self):
+        self.synth_cam_counter += 1
 
         # Update camera sensor at specified intervals
-        if self.camera_counter % CAMERA_UPDATE_INTERVAL == 0:
-            self.camera.update_sensor()
+        if self.synth_cam_counter == SYNTH_CAMERA_UPDATE_INTERVAL:
+            self.synth_cam.update_sensor()
+            self.synth_cam_counter = 0
+
+    def update_debug_camera(self):
+        self.debug_cam_counter += 1
+
+        if self.debug_cam_counter == DEBUG_CAMERA_UPDATE_INTERVAL:
+            robot_pos = p.getBasePositionAndOrientation(self.robot_id)[0]
+            p.resetDebugVisualizerCamera(self.cam_distance, self.cam_yaw,
+                                         self.cam_pitch, robot_pos)
+            self.debug_cam_counter = 0
+        
 
     def toggle_simulation(self):
         if self.simulation_running:
@@ -288,8 +302,9 @@ class SimulationApp(QMainWindow):
         
         self.map_counter += 1
         self.lidar.simulate(rays_data)
-        self.view_matrix = self.update_camera()
-        self.cube_creator.check_cube_button()
+        self.view_matrix = self.update_synth_camera()
+        self.cube_creator.update_cube_button()
+        self.update_debug_camera()
 
     def keypress_detection(self):
         """

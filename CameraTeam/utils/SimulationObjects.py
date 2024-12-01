@@ -85,6 +85,7 @@ class Robot:
     def __call__(self):
         # Return the robot_id when the class instance is called
         return self.robot_id
+
     def get_yaw(self):
         """
         Returns the yaw (orientation around the z-axis) of the robot.
