@@ -159,21 +159,21 @@ class Lidar:
         """
         a = self.start_angle*(math.pi/180)
         b = (self.end_angle - self.start_angle)*(math.pi/180)
-
+      
         ray_from, ray_to = [], []
         for i in range(self.num_rays):
             theta = float(a) + (float(b) * (float(i)/self.num_rays))
             x1 = self.START_LEN*math.sin(theta)
             y1 = self.START_LEN*math.cos(theta)
             z1 = 0
-
+          
             x2 = self.ray_len*math.sin(theta)
             y2 = self.ray_len*math.cos(theta)
             z2 = 0
 
             ray_from.append([x1, y1, z1])
             ray_to.append([x2, y2, z2])
-
+     
         self.ray_from = ray_from
         self.ray_to = ray_to
 
@@ -189,6 +189,7 @@ class Lidar:
                         )
                     )
         self.ray_ids = ray_ids
+        
 
     def retrieve_data(self, common=True, robot_state=None) -> tuple:
         """
@@ -233,7 +234,7 @@ class Lidar:
 
         # Get the rays which does not hit an object
         no_hit = np.where(rays_data[:, 2] == 1.)[0]
-
+        
         # Convert `coords` to numpy array to leverage Numpy's speed.
         # `coords` will be of shape (num_rays, 3) and coords[i] contains
         # [x, y, z] coordinates in world coordinate, for each rays.
@@ -335,3 +336,4 @@ class Lidar:
         for k in kwargs.keys():
             if k not in allowed_keys:
                 print("{} is not allowed to be updated".format(repr(k)))
+    

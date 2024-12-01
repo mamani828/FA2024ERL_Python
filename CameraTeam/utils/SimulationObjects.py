@@ -24,7 +24,7 @@ class Robot:
         Loads the racecar.urdf file and sets the returned ID to
         self.robot_id.
         """
-        racecar_coordinates = [0, 0, 0.5]  # Make sure it's on level ground
+        racecar_coordinates = [0, 0, 0.2]  # Make sure it's on level ground
         racecar_orientation = [0, 0, 0]  # Neutral orientation (Euler Angles)
         initial_racecar_orientation = p.getQuaternionFromEuler(racecar_orientation)  # Quaternions
         self.robot_id = p.loadURDF("racecar/racecar.urdf", racecar_coordinates,
