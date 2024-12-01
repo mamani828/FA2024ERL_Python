@@ -15,15 +15,21 @@ from QtMap import RobotMap
 
 SENSOR_CONFIG_PATH = os.path.join(os.path.dirname(__file__),
                                   'config/sensors.yaml')
-DEFAULT_GRID_SIZE = 10
+DEFAULT_GRID_SIZE = 200
 SIM_TIME_CONSTANT = 4  # How often the simulation is updated
+CAMERA_UPDATE_INTERVAL = 240
+MAX_RAY_NUMBER = 75
+MAX_START_ANGLE = 360
+MAX_END_ANGLE = 360
+MAX_RAY_LENGTH = 10
 
 class SimulationApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.initUI()
-        self.sliderUI()
-        self.initSim()
+        self.init_ui()
+        #self.slider_ui()
+        self.init_simulation()
+        self.init_debug_sliders()
         #self.initMap()
         self.simulation_running = True
 
@@ -31,7 +37,7 @@ class SimulationApp(QMainWindow):
         self.timer.timeout.connect(self.update_simulation)
         self.timer.start(SIM_TIME_CONSTANT)
 
-    def initSim(self):
+    def init_simulation(self):
         self.physicsClient = p.connect(p.GUI)
         p.setGravity(0, 0, -9.81)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
@@ -47,13 +53,14 @@ class SimulationApp(QMainWindow):
         lidar_config = SimulationApp.open_yaml("lidar_configs")
 
         self.camera = Camera(self.robot, camera_config)
+        self.camera_counter = 0
         
         self.lidar = Lidar(self.robot, lidar_config)
         self.lidar.setup()
 
         self.counter = 0
 
-    def initUI(self):
+    def init_ui(self):
         self.setWindowTitle("PyBullet + PyQt5 Simulation")
         self.setGeometry(100, 100, 800, 600)
 
@@ -80,7 +87,7 @@ class SimulationApp(QMainWindow):
         
         # UI elements of the Slider button
 
-    def sliderUI(self):
+    def slider_ui(self):
         #Slider setup
         self.slider = QtWidgets.QSlider(Qt.Orientation.Horizontal, self)
         self.slider.setMinimum(0)
@@ -99,9 +106,6 @@ class SimulationApp(QMainWindow):
         if value > 0:
             print(f"Slider value {value}") # For debugging slider
             if value != self.lidar.num_rays: #only updating if the value has changed 
-                for ray_id in self.lidar.ray_ids:
-                    p.removeUserDebugItem(ray_id)
-                
                 self.lidar.gui_change_parameter(num_rays=value)
 
         else:
@@ -110,6 +114,29 @@ class SimulationApp(QMainWindow):
             for ray_id in self.lidar.ray_ids:
                 p.removeUserDebugItem(ray_id)
             self.lidar.ray_ids.clear()
+
+    def init_debug_sliders(self):
+        self.sliders = []
+        self.sliders.append(
+            p.addUserDebugParameter("number of rays", 0, MAX_RAY_NUMBER, self.lidar.num_rays)
+        )
+        self.sliders.append(
+            p.addUserDebugParameter("start angle", 0, MAX_START_ANGLE, self.lidar.start_angle)
+        )
+        self.sliders.append(
+            p.addUserDebugParameter("end angle", 0, MAX_END_ANGLE, self.lidar.end_angle)
+        )
+        self.sliders.append(
+            p.addUserDebugParameter("ray length", 0, MAX_RAY_LENGTH, self.lidar.ray_len)
+        )
+
+    def read_debug_sliders(self):
+        self.gui_values = {
+            "num_rays": int(p.readUserDebugParameter(self.sliders[0])),
+            "start_angle": p.readUserDebugParameter(self.sliders[1]),
+            "end_angle": p.readUserDebugParameter(self.sliders[2]),
+            "ray_len": p.readUserDebugParameter(self.sliders[3]),
+        }
 
     def store_camera_data(self):
         camera_state = p.getDebugVisualizerCamera()
@@ -132,6 +159,14 @@ class SimulationApp(QMainWindow):
                                          self.cam_pitch, self.cam_target_position)
             self.simulation_running = True
             self.toggle_button.setText("Stop Simulation")
+
+    def update_camera(self):
+        self.camera_counter += 2
+
+            # Update camera sensor at specified intervals
+        if self.camera_counter % CAMERA_UPDATE_INTERVAL == 0:
+                view_matrix = self.camera.update_sensor()
+                width, height, rgb, depth, seg = p.getCameraImage(640, 480, viewMatrix=view_matrix)  # Lower resolution
 
     def update_simulation(self):
         # Step PyBullet simulation
@@ -163,6 +198,10 @@ class SimulationApp(QMainWindow):
             self.counter = 0
         
         self.counter += 1
+
+        self.read_debug_sliders()
+        self.lidar.gui_change_parameter(**self.gui_values)
+        self.update_camera()
 
     @staticmethod
     def open_yaml(config_name):

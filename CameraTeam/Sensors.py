@@ -125,15 +125,15 @@ class Lidar:
             None.
         """
         #  Constants
-        self.LIDAR_JOINTS = 8
+        self.LIDAR_JOINTS = config['lidar_joints']
         self.HIT_COLOR = config['hit_color']
         self.MISS_COLOR = config['miss_color']
+        self.START_LEN = config['ray_start_len']
 
         #  Default from config, GUI overrides
         self.num_rays = config['num_rays']
         self.start_angle = config['lidar_angle1']
         self.end_angle = config['lidar_angle2']
-        self.start_len = config['ray_start_len']
         self.ray_len = config['ray_len']
 
 
@@ -150,8 +150,8 @@ class Lidar:
         ray_from, ray_to = [], []
         for i in range(self.num_rays):
             theta = float(a) + (float(b) * (float(i)/self.num_rays))
-            x1 = self.start_len*math.sin(theta)
-            y1 = self.start_len*math.cos(theta)
+            x1 = self.START_LEN*math.sin(theta)
+            y1 = self.START_LEN*math.cos(theta)
             z1 = 0
 
             x2 = self.ray_len*math.sin(theta)
@@ -307,17 +307,17 @@ class Lidar:
         Raises:
             None.
         """
-        allowed_keys = {"num_rays", "start_angle", "end_angle", "start_len",
+        allowed_keys = {"num_rays", "start_angle", "end_angle",
                         "ray_len"}
         
         self.__dict__.update((k, v) for k, v in kwargs.items() if k in allowed_keys)
 
         # Removing existing rays in the Pybullet GUI
-        for ray_id in self.ray_ids:
-            p.removeUserDebugItem(ray_id)
+        p.removeAllUserDebugItems()
         
         self.ray_ids.clear()
-        self.setup()
+        if self.num_rays != 0:
+            self.setup()
 
         for k in kwargs.keys():
             if k not in allowed_keys:
