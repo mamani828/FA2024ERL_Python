@@ -4,32 +4,35 @@ import yaml
 import pybullet as p
 import pybullet_data
 import numpy as np
+
 from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLabel, QSlider
-from PyQt6.QtCore import QTimer, Qt
+from PyQt6.QtCore import QTimer, Qt, QThread
 from PyQt6.QtGui import QPixmap, QImage
 from PyQt6 import QtWidgets
-from Sensors import Camera, Lidar
-from SensorTest import Robot
-from QtMap import RobotMap
+
+from utils.Sensors import Camera, Lidar
+from utils.QtMap import RobotMap
+from utils.SimulationObjects import Robot, Object
 
 
 SENSOR_CONFIG_PATH = os.path.join(os.path.dirname(__file__),
                                   'config/sensors.yaml')
 DEFAULT_GRID_SIZE = 200
 SIM_TIME_CONSTANT = 4  # How often the simulation is updated
-CAMERA_UPDATE_INTERVAL = 240
+CAMERA_UPDATE_INTERVAL = 6
 MAX_RAY_NUMBER = 75
 MAX_START_ANGLE = 360
 MAX_END_ANGLE = 360
 MAX_RAY_LENGTH = 10
 
+
 class SimulationApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.init_ui()
-        #self.slider_ui()
         self.init_simulation()
         self.init_debug_sliders()
+        #self.slider_ui()
         #self.initMap()
         self.simulation_running = True
 
@@ -61,8 +64,8 @@ class SimulationApp(QMainWindow):
         self.counter = 0
 
     def init_ui(self):
-        self.setWindowTitle("PyBullet + PyQt5 Simulation")
-        self.setGeometry(100, 100, 800, 600)
+        self.setWindowTitle("PyBullet + PyQt6 Simulation")
+        self.setGeometry(100, 100, 600, 500)
 
         # Main layout of the GUI
         central_widget = QWidget(self)
@@ -83,9 +86,6 @@ class SimulationApp(QMainWindow):
         self.robot_map = RobotMap(DEFAULT_GRID_SIZE)
         self.robot_map.setFixedSize(640, 640)
         layout.addWidget(self.robot_map)
-        
-        
-        # UI elements of the Slider button
 
     def slider_ui(self):
         #Slider setup
@@ -145,6 +145,14 @@ class SimulationApp(QMainWindow):
         self.cam_yaw = camera_state[8]               # Yaw angle
         self.cam_pitch = camera_state[9]             # Pitch angle
 
+    def update_camera(self):
+        self.camera_counter += 1
+
+            # Update camera sensor at specified intervals
+        if self.camera_counter % CAMERA_UPDATE_INTERVAL == 0:
+                view_matrix = self.camera.update_sensor()
+                #width, height, rgb, depth, seg = p.getCameraImage(640, 480, viewMatrix=view_matrix)  # Lower resolution
+
     def toggle_simulation(self):
         if self.simulation_running:
             self.timer.stop()
@@ -159,14 +167,6 @@ class SimulationApp(QMainWindow):
                                          self.cam_pitch, self.cam_target_position)
             self.simulation_running = True
             self.toggle_button.setText("Stop Simulation")
-
-    def update_camera(self):
-        self.camera_counter += 2
-
-            # Update camera sensor at specified intervals
-        if self.camera_counter % CAMERA_UPDATE_INTERVAL == 0:
-                view_matrix = self.camera.update_sensor()
-                width, height, rgb, depth, seg = p.getCameraImage(640, 480, viewMatrix=view_matrix)  # Lower resolution
 
     def update_simulation(self):
         # Step PyBullet simulation
@@ -212,26 +212,6 @@ class SimulationApp(QMainWindow):
             print("Config file not found!")
             sys.exit(0)
 
-class Object:
-    def __init__(self, coordinates, color):
-        self.color = color
-        self.coordinates = coordinates
-        self.object_id = self.loading_box()  # Storing the object's ID
-
-    def loading_box(self):
-        half_extents = [0.5, 0.5, 0.5]
-        box_coordinates = self.coordinates
-        box_orientation = [0, 0, 0]
-        initial_box_orientation = p.getQuaternionFromEuler(box_orientation)
-
-        box_collision_shape = p.createCollisionShape(shapeType=p.GEOM_BOX, halfExtents=half_extents)
-        box_visual_shape = p.createVisualShape(shapeType=p.GEOM_BOX, halfExtents=half_extents, rgbaColor=self.color)
-
-        # Create a multibody and return its ID
-        return p.createMultiBody(baseMass=50, baseCollisionShapeIndex=box_collision_shape,
-                                 baseVisualShapeIndex=box_visual_shape,
-                                 basePosition=box_coordinates,
-                                 baseOrientation=initial_box_orientation)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
