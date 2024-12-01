@@ -85,7 +85,18 @@ class Robot:
     def __call__(self):
         # Return the robot_id when the class instance is called
         return self.robot_id
-     
+    def get_yaw(self):
+        """
+        Returns the yaw (orientation around the z-axis) of the robot.
+        The robot's orientation is provided as a quaternion and we extract
+        the yaw angle from it.
+        """
+        # Get the robot's current orientation as a quaternion (w, x, y, z)
+        robot_pos, robot_orn = p.getBasePositionAndOrientation(self.robot_id)
+        # Convert the quaternion to Euler angles (roll, pitch, yaw)
+        euler_angles = p.getEulerFromQuaternion(robot_orn)
+        yaw = euler_angles[2]  # Extract yaw (z-axis rotation)
+        return yaw
 
 
 class Object:

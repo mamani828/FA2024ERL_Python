@@ -17,6 +17,7 @@ BLUE = 3
 GREY = 4
 
 
+
 class RobotMap(QWidget):
     def __init__(self, grid_size):
         super().__init__()
@@ -87,7 +88,7 @@ class RobotMap(QWidget):
                 y1 += sy
         return points
 
-    def third_calculate_matrix(self, robot_pos, ray_pos, gui_values, distance=None, scaling_factor=DEFAULT_SCALE):
+    def third_calculate_matrix(self, robot_pos, ray_pos, gui_values, yaw, distance=None, scaling_factor=DEFAULT_SCALE):
         """
         Update the map grid using Bresenham's algorithm to mark ray paths.
         - Cells along the ray path are set to gray (if no hit occurs).
@@ -120,9 +121,9 @@ class RobotMap(QWidget):
         for ray_x, ray_y in ray_pos:
             if np.isnan(ray_x) or np.isnan(ray_y):
                 ray_angle = start_angle + ray_num *angle_step
-                adjusted_angle = ray_angle+ car_heading
+                adjusted_angle = ray_angle+ math.degrees(yaw) 
                 # Normalize the angle to be between -180° and 180°
-                adjusted_angle = (adjusted_angle + 180) % 360 - 180
+                #adjusted_angle = (adjusted_angle + 180) % 360 - 180
 
                 # Convert the adjusted angle to radians
                 angle_rad = math.radians(adjusted_angle)
@@ -138,6 +139,9 @@ class RobotMap(QWidget):
                     if 0 <= x < self.GRID_SIZE and 0 <= y < self.GRID_SIZE:
                         if self.grid[x][y] != RED and self.grid[x][y] != BLACK:  # Don't overwrite the robot's position or previous object hit data
                             self.grid[x][y] = GREY  # Mark the ray path as grey
+                            # If the ray is directly in front, color it blue
+                if ray_num == round((num_rays // 2)):  # Assuming front ray is the middle one
+                    self.grid[grid_x][grid_y] = BLUE  # Mark the ray directly in front as blue
 
 
             else:

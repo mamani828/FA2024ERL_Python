@@ -271,7 +271,8 @@ class SimulationApp(QMainWindow):
 
         if (self.map_counter == 15):
             ray_len = self.gui_values["ray_len"]
-            self.robot_map.third_calculate_matrix(robot_pos, coords,self.gui_values)
+            yaw = self.robot.get_yaw()
+            self.robot_map.third_calculate_matrix(robot_pos, coords,self.gui_values, yaw)
             self.map_counter = 0
         
         self.map_counter += 1
