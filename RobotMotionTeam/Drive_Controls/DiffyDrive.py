@@ -48,13 +48,13 @@ class PybulletEnvironment:
         self.goalPointX=p.addUserDebugParameter("Goal Point X", -50, 50, 0)
         self.goalPointY=p.addUserDebugParameter("Goal Point Y", -50, 50, 0)
         
-        self.kp_linear=p.addUserDebugParameter("kp-linear", -10, 10, 8) 
-        self.ki_linear=p.addUserDebugParameter("ki-linear", -10, 10, 0)
-        self.kd_linear=p.addUserDebugParameter("kd-linear", -10, 10, 0.5)
+        self.kp_linear=p.addUserDebugParameter("kp-linear", 0, 10, 8) 
+        self.ki_linear=p.addUserDebugParameter("ki-linear", 0, 10, 0)
+        self.kd_linear=p.addUserDebugParameter("kd-linear", 0, 10, 0.5)
         
-        self.kp_angular=p.addUserDebugParameter("kp-angular", -10, 10, 8) 
-        self.ki_angular=p.addUserDebugParameter("ki-angular", -10, 10, 0)
-        self.kd_angular=p.addUserDebugParameter("kd-angular", -10, 10, 0.5)
+        self.kp_angular=p.addUserDebugParameter("kp-angular", 0, 100, 20) 
+        self.ki_angular=p.addUserDebugParameter("ki-angular", 0, 50, 0)
+        self.kd_angular=p.addUserDebugParameter("kd-angular", 0, 50, 0.2)
         #Add debug sliders for each control point (X, Y, Z)
         self.sliders = []
         for i, cp in enumerate(self.path.control_points):
@@ -116,6 +116,8 @@ class PybulletEnvironment:
                 
                 
                 
+                print(self.jackal_robot.position)
+              
                 #logging data
                 logging.info(f"Position: {', '.join(str(i) for i in self.jackal_robot.position)}, Errors: X={self.x_error}, Y={self.y_error}, "
                              f"Velocities: X={self.linear_velocity}, Heading={self.h_error}")
@@ -189,7 +191,7 @@ class Robot:
                     jointIndex=wheel,
                     controlMode=p.VELOCITY_CONTROL,
                     targetVelocity=self.vl,
-                    force = 7 # i think the torque on a jackal
+                    force = 8 # i think the torque on a jackal
                 )
             for wheel in self.wheels_right:
                 p.setJointMotorControl2(
@@ -197,7 +199,7 @@ class Robot:
                     jointIndex=wheel,
                     controlMode=p.VELOCITY_CONTROL,
                     targetVelocity=self.vr,
-                    force = 7 # i think the torque on a jackal
+                    force = 8 # i think the torque on a jackal
                 )
     def inverse_kinematics(self,v_f, v0): # converting forward+angular velocity into wheel velocities
         self.vr=v_f+self.track_radius*v0        # velocity of left wheels
