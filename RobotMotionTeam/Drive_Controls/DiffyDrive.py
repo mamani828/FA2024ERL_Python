@@ -27,7 +27,7 @@ class PybulletEnvironment:
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setGravity(0, 0, -9.81)
         self.plane_id = p.loadURDF("plane.urdf")
-
+        p.changeDynamics(self.plane_id, -1, lateralFriction=1.0)
         # choose which to use by setting self.Cylinder to Cylinder() or Robot()
         # self.Cylinder = Cylinder()
         

@@ -22,7 +22,7 @@ class PybulletEnvironment:
         #    lateralFriction=2
         # )
         self.plane_id = p.loadURDF("plane.urdf")
-
+        
         # choose which to use by setting self.Cylinder to Cylinder() or Robot()
         # self.Cylinder = Cylinder()
 
