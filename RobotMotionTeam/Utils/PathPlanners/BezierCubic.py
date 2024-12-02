@@ -21,7 +21,7 @@ class Bezier:
                 lineColorRGB=[1, 0, 0],
                 lineWidth=30
             )
-    def get_bezier_curve(self, t):
+    def get_bezier_curve(self, t): 
         """Computes a point on the Bezier curve at parameter t."""
         cp = self.control_points
         return (1 - t)**3 * cp[0] + 3 * (1 - t)**2 * t * cp[1] + 3 * (1 - t) * t**2 * cp[2] + t**3 * cp[3]
@@ -39,7 +39,7 @@ class Bezier:
     def update_sliders(self,sliders):
         self.sliders=sliders
         
-    def get_Path(self,length=200):
+    def get_Path(self,length=200): # getting multiple points in the path to use to draw it in pybullet
         iteration=1/length
         self.path=[]
         time=0

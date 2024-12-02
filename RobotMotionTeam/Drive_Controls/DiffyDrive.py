@@ -78,7 +78,8 @@ class PybulletEnvironment:
                 goal=self.follower.find_lookahead_point()
                 self.x_goal=goal[0]
                 self.y_goal=goal[1]
-                print(self.x_goal,self.y_goal)
+                
+                
                 # showing the lookahead intersection point
                 p.addUserDebugLine([self.x_goal,self.y_goal-0.1,0.05],
                                     [self.x_goal,self.y_goal+0.1 , 0.05],
@@ -89,12 +90,10 @@ class PybulletEnvironment:
                 self.y_error=self.y_goal-self.current_y
                 self.h_error=self.angle_wrap(math.atan2(self.y_error,self.x_error)-self.current_h)
                 
-                # calculate with pid
+                # calculate with pid for the velocity to go to the lookahead
                 self.linear_velocity=self.linear_pid.calculateVelocity(self.x_error)
                 self.angular_velocity=self.angular_pid.calculateVelocity(self.h_error)
                 
-                print(self.x_error)
-                # print(self.linear_velocity,self.angular_velocity)
                 # setting the velocities
                 self.jackal_robot.inverse_kinematics(self.linear_velocity,self.angular_velocity)
                 self.jackal_robot.setVelocity()
@@ -111,13 +110,13 @@ class PybulletEnvironment:
 
                 
 
-    def angle_wrap(self,radians):
+    def angle_wrap(self,radians): # returning angle between -pi and pi
         while radians > math.pi:
             radians -= 2 * math.pi
         while radians < -math.pi:
             radians += 2 * math.pi
         return radians
-    def read_sliders(self):
+    def read_sliders(self): # reading in data from sliders
         try:
         #     self.x_goal=p.readUserDebugParameter(self.goalPointX)
         #     self.y_goal=p.readUserDebugParameter(self.goalPointY)
@@ -150,10 +149,10 @@ class Robot:
         Wheel Index 4: Back Right
         """
 
-    def getPosition(self):
+    def getPosition(self): # getting robot position
         return p.getBasePositionAndOrientation(self.robot_id)[0]
 
-    def getHeading(self):
+    def getHeading(self): # getting robot heading
         orientation = p.getBasePositionAndOrientation(self.robot_id)[1]
         euler_angles = p.getEulerFromQuaternion(orientation)
         return euler_angles[2]  # Yaw angle
@@ -167,7 +166,7 @@ class Robot:
         
     def getRobotId(self):
         return self.robot_id
-    def setVelocity(self):
+    def setVelocity(self): # setting velocity on the left and right wheels(you set wheels to left and right not individual in tank drive)
 
             for wheel in self.wheels_left:
                 p.setJointMotorControl2(
