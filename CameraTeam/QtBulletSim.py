@@ -1,24 +1,28 @@
 import sys
 import os
 import yaml
-import threading
 
 import pybullet as p
 import pybullet_data
-import numpy as np
 
-from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLabel, QSlider
-from PyQt6.QtCore import QTimer, Qt, QThread
-from PyQt6.QtGui import QPixmap, QImage
-from PyQt6 import QtWidgets
+from PyQt6.QtWidgets import (QApplication,
+                             QMainWindow,
+                             QPushButton,
+                             QVBoxLayout,
+                             QWidget,
+                             QLabel
+                             )
+from PyQt6.QtCore import QTimer, Qt
 
 from utils.Sensors import Camera, Lidar
 from utils.QtMap import RobotMap
-from utils.SimulationObjects import Robot, Object
-
+from utils.SimulationObjects import Robot, CubeCreator
+from utils.RobotDialog import RobotDialog
 
 SENSOR_CONFIG_PATH = os.path.join(os.path.dirname(__file__),
                                   'config/sensors.yaml')
+TUTORIAL_CSV_PATH = os.path.join(os.path.dirname(__file__),
+                                 'utils/script.csv')
 DEFAULT_GRID_SIZE = 100
 SIM_TIME_CONSTANT = 4  # How often the simulation is updated
 SYNTH_CAMERA_UPDATE_INTERVAL = 30
@@ -33,57 +37,7 @@ WALL_MASS = 0  # Mass of 0 to make the wall static
 WALL_COLOR = [0.7, 0.7, 0.7, 1]  # Gray color for the wall
 
 
-class CubeCreator:
-    def __init__(self):
-        self.cube_count = 0
-        self.button_id = p.addUserDebugParameter("Create Cube", 1, 0, 1)
-        self.prev_button_state = p.readUserDebugParameter(self.button_id)
-        self.create_info_text()
 
-    def create_info_text(self):
-        self.info_text_id = p.addUserDebugText(
-            text="Cubes created: 0",
-            textPosition=[0, 0, 3],
-            textColorRGB=[1, 1, 1],
-            textSize=1.5
-        )
-
-    def update_info_text(self, x, y):
-            p.addUserDebugText(
-                text=f"Cubes created: {self.cube_count}",
-                textPosition=[x, y, 3],
-                textColorRGB=[1, 1, 1],
-                textSize=1.5,
-                replaceItemUniqueId=self.info_text_id
-            )
-
-    def update_cube_button(self, robot_pos):
-        current_button_state = p.readUserDebugParameter(self.button_id)
-        if current_button_state != self.prev_button_state:
-            self.create_new_cube()
-            self.cube_count += 1
-            self.update_info_text(robot_pos[0], robot_pos[1])
-            self.prev_button_state = current_button_state
-
-    @staticmethod
-    def create_new_cube():
-        cube_size = 0.3
-        x = np.random.normal(0, 4)
-        y = np.random.normal(0, 4)
-        position = [x, y, cube_size/2]
-        orientation = p.getQuaternionFromEuler([0, 0, 0])
-        color = list(np.random.uniform(0, 1, 3)) + [1]
-        visual_shape = p.createVisualShape(shapeType=p.GEOM_BOX,
-                                        halfExtents=[cube_size/2]*3,
-                                        rgbaColor=color)
-
-        collision_shape = p.createCollisionShape(shapeType=p.GEOM_BOX,
-                                                halfExtents=[cube_size/2]*3)
-
-        p.createMultiBody(baseMass=1, baseVisualShapeIndex=visual_shape,
-                        baseCollisionShapeIndex=collision_shape,
-                        basePosition=position,
-                        baseOrientation=orientation)
 
 class SimulationApp(QMainWindow):
     def __init__(self):
@@ -107,13 +61,11 @@ class SimulationApp(QMainWindow):
         orientation = [0, 0, 0]  # Euler Angles Roll, Pitch, Yaw
         initial_orientation = p.getQuaternionFromEuler(orientation)  # Converting to Quaternion
         self.plane_id = p.loadURDF("plane.urdf", coordinates, initial_orientation)
-        # First, create an instance of the Object class
-        object_instance = Object(coordinates=[5, 0, 1], color=[1, 0, 0, 1])  # Example object (coordinates, color)
 
         # Now, call the create_wall method on that instance
         WALL_SIZE = [0.2, 5, 1]  # Wall dimensions (length, width, height)
-        wall1 = object_instance.create_wall(position=[2, 0, 0], WALL_SIZE=WALL_SIZE, WALL_COLOR=WALL_COLOR)
-        wall2 = object_instance.create_wall(position=[-2, 0, 0], WALL_SIZE=WALL_SIZE, WALL_COLOR=WALL_COLOR)
+        wall1 = CubeCreator.create_wall(position=[2, 0, 0], WALL_SIZE=WALL_SIZE, WALL_COLOR=WALL_COLOR)
+        wall2 = CubeCreator.create_wall(position=[-2, 0, 0], WALL_SIZE=WALL_SIZE, WALL_COLOR=WALL_COLOR)
 
         camera_config = SimulationApp.open_yaml("camera_configs")
         lidar_config = SimulationApp.open_yaml("lidar_configs")
@@ -129,6 +81,7 @@ class SimulationApp(QMainWindow):
 
         self.synth_cam_counter = 0
         self.map_counter = 0
+        self.map_version = 1
         self.debug_cam_counter = 0
 
         self.lidar_values = []
@@ -156,39 +109,17 @@ class SimulationApp(QMainWindow):
         # Visualization label
         self.visualization_label = QLabel(self)
         self.visualization_label.setText("Simulation Visualization")
-        layout.addWidget(self.visualization_label)
+        layout.addWidget(self.visualization_label, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         # Robot map
         self.robot_map = RobotMap(DEFAULT_GRID_SIZE)
-        layout.addWidget(self.robot_map)
+        layout.addWidget(self.robot_map, alignment=Qt.AlignmentFlag.AlignHCenter)
 
-    def slider_ui(self):
-        #Slider setup
-        self.slider = QtWidgets.QSlider(Qt.Orientation.Horizontal, self)
-        self.slider.setMinimum(0)
-        self.slider.setMaximum(50) # Allows users to slide between 0 Lidar rays to 50
-        self.slider.setValue(0) # Intializing Lidar to have 20 rays 
-        self.slider.setTickPosition(QSlider.TickPosition.TicksBelow)
-        self.slider.setTickInterval(2)
-        self.slider.valueChanged.connect(self.on_slide) # Connects to a slot to handle slider
-
-        # Adding the sldier to the layout 
-        central_widget = self.centralWidget()
-        layout = central_widget.layout()
-        layout.addWidget(self.slider)
-    
-    def on_slide(self,value):
-        if value > 0:
-            print(f"Slider value {value}") # For debugging slider
-            if value != self.lidar.num_rays: #only updating if the value has changed 
-                self.lidar.gui_change_parameter(num_rays=value)
-
-        else:
-            print("No Lidar Rays")
-            # Remove Every single ray if the slider value is 0
-            for ray_id in self.lidar.ray_ids:
-                p.removeUserDebugItem(ray_id)
-            self.lidar.ray_ids.clear()
+        self.csv_dialog = RobotDialog(self, TUTORIAL_CSV_PATH)
+        self.csv_dialog.setFixedHeight(75)
+        self.csv_dialog.setFixedWidth(600)
+        self.csv_dialog.set_color("white", "black", "#252625", "#525452")
+        layout.addWidget(self.csv_dialog)
 
     def init_debug_sliders(self):
         self.lidar_sliders = []
@@ -203,7 +134,7 @@ class SimulationApp(QMainWindow):
             p.addUserDebugParameter("  end angle", 0, MAX_END_ANGLE, self.lidar.end_angle)
         )
         self.lidar_sliders.append(
-            p.addUserDebugParameter("  ray length", 0, MAX_RAY_LENGTH, self.lidar.ray_len)
+            p.addUserDebugParameter("  ray length", self.lidar.START_LEN, MAX_RAY_LENGTH, self.lidar.ray_len)
         )
 
         self.robot_sliders = []
@@ -259,7 +190,6 @@ class SimulationApp(QMainWindow):
             p.resetDebugVisualizerCamera(self.cam_distance, self.cam_yaw,
                                          self.cam_pitch, robot_pos)
             self.debug_cam_counter = 0
-        
 
     def toggle_simulation(self):
         if self.simulation_running:
@@ -277,6 +207,20 @@ class SimulationApp(QMainWindow):
             self.simulation_running = True
             self.toggle_button.setText("Stop Simulation")
 
+    def gui_update_map(self, robot_pos, rays_data, coords):
+        ray_len = self.lidar_values["ray_len"]
+        yaw = self.robot.get_yaw()
+        if self.map_version % 3 == 1:
+            self.robot_map.first_calculate_matrix(robot_pos, coords)
+        if self.map_version % 3 == 2:
+            self.objectlist = self.robot_map.second_calculate_matrix(robot_pos, coords,
+                                                                        self.lidar_values,
+                                                                        yaw, rays_data,
+                                                                        self.objectlist)
+        if self.map_version % 3 == 0:
+            self.robot_map.third_calculate_matrix(robot_pos, coords,self.lidar_values, yaw, rays_data)
+        self.map_counter = 0
+
     def update_simulation(self):
         # Step PyBullet simulation
         p.stepSimulation()
@@ -288,7 +232,7 @@ class SimulationApp(QMainWindow):
         self.read_debug_sliders()
         if self.old_lidar_param != self.lidar_values:
             self.lidar.gui_change_parameter(**self.lidar_values)
-        
+
         if self.old_robot_param != self.robot_values:
             self.robot.gui_change_parameter(**self.robot_values)
 
@@ -296,27 +240,10 @@ class SimulationApp(QMainWindow):
         rays_data, dists, coords  = self.lidar.retrieve_data(common=False)
         robot_pos = self.robot.get_pos()
 
-        # For visualization, create a simple 2D plot (e.g., with QImage/QPixmap)
-        """
-        lidar_image = np.zeros((480, 640, 3), dtype=np.uint8)
-        for i, dist in enumerate(dists):
-            if dist < self.lidar.ray_len:
-                x = int(320 + dist * np.cos(np.radians(bearings[i])) * 100)
-                y = int(240 - dist * np.sin(np.radians(bearings[i])) * 100)
-                if 0 <= x < 640 and 0 <= y < 480:
-                    lidar_image[y, x] = [255, 0, 0]  # Red for hits
-        q_image = QImage(lidar_image, 640, 480, QImage.Format_RGB888)
-        pixmap = QPixmap.fromImage(q_image)
-        self.visualization_label.setPixmap(pixmap)
-        """
-
-        if (self.map_counter == 15):
-            ray_len = self.lidar_values["ray_len"]
-            yaw = self.robot.get_yaw()
-            self.objectlist = self.robot_map.second_calculate_matrix(robot_pos, coords,self.lidar_values, yaw, rays_data, self.objectlist)
-            self.map_counter = 0
-        
+        if self.map_counter == 15:
+            self.gui_update_map(robot_pos, rays_data, coords)
         self.map_counter += 1
+
         self.lidar.simulate(rays_data)
         self.view_matrix = self.update_synth_camera()
         self.cube_creator.update_cube_button(robot_pos)
@@ -339,6 +266,7 @@ class SimulationApp(QMainWindow):
 
         d_pressed = (ord("d") in keys and keys[ord("d")] & p.KEY_IS_DOWN) or \
                     (p.B3G_RIGHT_ARROW in keys and keys[p.B3G_RIGHT_ARROW] & p.KEY_IS_DOWN)
+
         if w_pressed and not s_pressed:
             self.robot.move("W")
         elif s_pressed and not w_pressed:
