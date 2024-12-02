@@ -102,12 +102,11 @@ class SimulationApp(QMainWindow):
         self.physicsClient = p.connect(p.GUI)
         p.setGravity(0, 0, -9.81)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
-
+        self.objectlist =[] #obj list for 2nd ogm method
         coordinates = [0, 0, 0]  # initial coordinates and orientation for the plane
         orientation = [0, 0, 0]  # Euler Angles Roll, Pitch, Yaw
         initial_orientation = p.getQuaternionFromEuler(orientation)  # Converting to Quaternion
         self.plane_id = p.loadURDF("plane.urdf", coordinates, initial_orientation)
-
         # First, create an instance of the Object class
         object_instance = Object(coordinates=[5, 0, 1], color=[1, 0, 0, 1])  # Example object (coordinates, color)
 
@@ -314,7 +313,7 @@ class SimulationApp(QMainWindow):
         if (self.map_counter == 15):
             ray_len = self.lidar_values["ray_len"]
             yaw = self.robot.get_yaw()
-            self.robot_map.second_calculate_matrix(robot_pos, coords,self.lidar_values, yaw, rays_data)
+            self.objectlist = self.robot_map.second_calculate_matrix(robot_pos, coords,self.lidar_values, yaw, rays_data, self.objectlist)
             self.map_counter = 0
         
         self.map_counter += 1
