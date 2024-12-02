@@ -23,11 +23,11 @@ SENSOR_CONFIG_PATH = os.path.join(os.path.dirname(__file__),
                                   'config/sensors.yaml')
 TUTORIAL_CSV_PATH = os.path.join(os.path.dirname(__file__),
                                  'utils/script.csv')
-DEFAULT_GRID_SIZE = 10
+DEFAULT_GRID_SIZE = 100
 SIM_TIME_CONSTANT = 4  # How often the simulation is updated
 MAP_UPDATE_INTERVAL = 15
-SYNTH_CAMERA_UPDATE_INTERVAL = 2
-DEBUG_CAMERA_UPDATE_INTERVAL = 30
+SYNTH_CAMERA_UPDATE_INTERVAL = 30
+DEBUG_CAMERA_UPDATE_INTERVAL = 10
 MAX_RAY_NUMBER = 75
 MAX_START_ANGLE = 360
 MAX_END_ANGLE = 360
