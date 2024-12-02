@@ -80,8 +80,8 @@ class PybulletEnvironment:
                 self.y_goal=goal[1]
                 print(self.x_goal,self.y_goal)
                 # showing the lookahead intersection point
-                p.addUserDebugLine([self.x_goal,self.y_goal-0.1,0.2],
-                                    [self.x_goal,self.y_goal+0.1 , 0.2],
+                p.addUserDebugLine([self.x_goal,self.y_goal-0.1,0.05],
+                                    [self.x_goal,self.y_goal+0.1 , 0.05],
                                     lineColorRGB=[1, 0, 0], 
                                     lineWidth=300)
             

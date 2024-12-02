@@ -2,10 +2,10 @@ import numpy as np
 class Bezier:
     def __init__(self,p, sliders):
         self.control_points=[
-            np.array([0, 0, 0.2]),
-            np.array([2, 1, 0.2]),
-            np.array([4, -1, 0.2]),
-            np.array([6, 0, 0.2])
+            np.array([0, 0, 0]),
+            np.array([2, 1, 0]),
+            np.array([4, -1, 0]),
+            np.array([6, 0, 0])
         ]
         self.p=p
         self.t=0
