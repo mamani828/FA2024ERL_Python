@@ -62,9 +62,6 @@ class RobotMap(QWidget):
 
         self.update_map()
 
-    def second_calculate_matrix(self, robot_pos, ray_pos, distance, scaling_factor=DEFAULT_SCALE):
-        # Accounts for moving objects
-        pass
 
     def bresenham(self, x1, y1, x2, y2):
         """Bresenham's line algorithm for calculating the path between two points on a grid."""
@@ -87,6 +84,86 @@ class RobotMap(QWidget):
                 err += dx
                 y1 += sy
         return points
+    
+    def second_calculate_matrix(self, robot_pos, ray_pos, gui_values, yaw, rays_data, distance=None, scaling_factor=DEFAULT_SCALE):
+        # Reset the previous robot position to GREY
+        self.ray_len = gui_values["ray_len"]
+        self.start_angle = gui_values["start_angle"]
+        self.end_angle = gui_values["end_angle"]
+        self.num_rays = gui_values["num_rays"]
+        hit_dat = rays_data[:, 2]
+        car_heading = robot_pos[2]
+
+        prev_robot_grid_x = int(self.robot_x // scaling_factor) + self.OFFSET
+        prev_robot_grid_y = int(self.robot_y // scaling_factor) + self.OFFSET
+        self.grid[prev_robot_grid_x][prev_robot_grid_y] = GREY
+
+        # Update the robot's position
+        self.robot_x, self.robot_y, _ = robot_pos
+        robot_grid_x = int(self.robot_x // scaling_factor) + self.OFFSET
+        robot_grid_y = int(self.robot_y // scaling_factor) + self.OFFSET
+        self.grid[robot_grid_x][robot_grid_y] = RED  # Mark the robot's position
+
+
+        #angle_step = (end_angle - start_angle)/(num_rays-1)
+
+
+        # Mark the ray paths using Bresenham's line algorithm
+        ray_num = 0
+        ray_ids =[]
+        #print(len(ray_pos))
+
+        a = self.end_angle *(math.pi/180)
+        b = (self.start_angle - self.end_angle)*(math.pi/180)
+        ray_angles =[]
+        ray_from, ray_to = [], []
+        for i in range(self.num_rays):
+            theta = float(a) + (float(b) * (float(i)/self.num_rays))
+            ray_angles.append(theta)
+        self.ray_angles = ray_angles
+        for ray_x, ray_y in ray_pos:
+            if np.isnan(ray_x) or np.isnan(ray_y): 
+                
+                theta = ray_angles[ray_num]
+                adjusted_angle = theta+ yaw 
+
+
+                # Convert the adjusted angle to radians
+                #angle_rad = math.radians(adjusted_angle)
+                angle_rad = adjusted_angle - math.pi/2
+                #print(ray_num)
+                # Calculate the end coordinates of the ray using ray_len and the adjusted angle
+                ray_end_x = self.robot_x + self.ray_len * math.cos(angle_rad)
+                ray_end_y = self.robot_y + self.ray_len * math.sin(angle_rad)
+                grid_x = int(ray_end_x // scaling_factor) + self.OFFSET
+                grid_y = int(ray_end_y // scaling_factor) + self.OFFSET
+                ray_path = self.bresenham(robot_grid_x, robot_grid_y, grid_x, grid_y)
+                # Mark the path of the ray on the grid
+                for (x, y) in ray_path:
+                    if 0 <= x < self.GRID_SIZE and 0 <= y < self.GRID_SIZE:
+                        if self.grid[x][y] != RED: # Don't overwrite the robot's position or previous object hit data
+                            self.grid[x][y] = GREY  # Mark the ray path as grey
+            else:
+                # Convert ray endpoint to grid coordinates
+                grid_x = int(ray_x // scaling_factor) + self.OFFSET
+                grid_y = int(ray_y // scaling_factor) + self.OFFSET
+                # Perform Bresenham's algorithm to find the path of the ray
+                ray_path = self.bresenham(robot_grid_x, robot_grid_y, grid_x, grid_y)
+
+                # Mark the path of the ray on the grid
+                for (x, y) in ray_path:
+                    if 0 <= x < self.GRID_SIZE and 0 <= y < self.GRID_SIZE:
+                        if self.grid[x][y] != RED:  # Don't overwrite the robot's position or previous object hit data
+                            self.grid[x][y] = GREY  # Mark the ray path as grey
+
+                # Mark the hit point with BLACK (or other color if needed)
+                if 0 <= grid_x < self.GRID_SIZE and 0 <= grid_y < self.GRID_SIZE:
+                    self.grid[grid_x][grid_y] = BLACK
+                ray_ids.append(ray_num)
+            ray_num = ray_num+1
+        
+        self.update_map()
+
 
     def third_calculate_matrix(self, robot_pos, ray_pos, gui_values, yaw, rays_data, distance=None, scaling_factor=DEFAULT_SCALE):
         """
@@ -138,14 +215,9 @@ class RobotMap(QWidget):
         for ray_x, ray_y in ray_pos:
             if np.isnan(ray_x) or np.isnan(ray_y): 
                 
-                
-                #a = start_angle*(math.pi/180)
-                #b = (end_angle - start_angle)*(math.pi/180)
-                #theta = float(a) + (float(b) * float(ray_num)/num_rays)
                 theta = ray_angles[ray_num]
                 adjusted_angle = theta+ yaw 
-                # Normalize the angle to be between -180° and 180°
-                #adjusted_angle = (adjusted_angle + 180) % 360 - 180
+
 
                 # Convert the adjusted angle to radians
                 #angle_rad = math.radians(adjusted_angle)
@@ -162,14 +234,6 @@ class RobotMap(QWidget):
                     if 0 <= x < self.GRID_SIZE and 0 <= y < self.GRID_SIZE:
                         if self.grid[x][y] != RED and self.grid[x][y] != BLACK:  # Don't overwrite the robot's position or previous object hit data
                             self.grid[x][y] = GREY  # Mark the ray path as grey
-                            #print(f"Ray {ray_num}: angle={angle_rad}, ray_end_x={ray_end_x}, ray_end_y={ray_end_y}")
-
-                            # If the ray is directly in front, color it blue
-               # if ray_num == round((num_rays // 2)):  # Assuming front ray is the middle one
-                    #self.grid[grid_x][grid_y] = BLUE  # Mark the ray directly in front as blue """
-
-
-
             else:
                 # Convert ray endpoint to grid coordinates
                 grid_x = int(ray_x // scaling_factor) + self.OFFSET

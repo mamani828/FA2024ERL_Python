@@ -314,7 +314,7 @@ class SimulationApp(QMainWindow):
         if (self.map_counter == 15):
             ray_len = self.lidar_values["ray_len"]
             yaw = self.robot.get_yaw()
-            self.robot_map.third_calculate_matrix(robot_pos, coords,self.lidar_values, yaw, rays_data)
+            self.robot_map.second_calculate_matrix(robot_pos, coords,self.lidar_values, yaw, rays_data)
             self.map_counter = 0
         
         self.map_counter += 1
