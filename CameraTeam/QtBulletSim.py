@@ -44,8 +44,7 @@ class SimulationApp(QMainWindow):
         super().__init__()
         self.init_ui()
         self.init_simulation()
-        #self.slider_ui()
-        #self.initMap()
+        self.store_camera_data()
         self.simulation_running = True
 
         self.timer = QTimer()
@@ -90,7 +89,6 @@ class SimulationApp(QMainWindow):
         self.init_debug_sliders()
         self.read_debug_sliders()
         self.init_cube_creator()
-        self.store_camera_data()
 
     def init_ui(self):
         self.setWindowTitle("PyBullet + PyQt6 Simulation")
@@ -108,18 +106,30 @@ class SimulationApp(QMainWindow):
 
         # Visualization label
         self.visualization_label = QLabel(self)
-        self.visualization_label.setText("Simulation Visualization")
+        self.map_version_names = ["OGM Version 3", "OGM Version 1", "OGM Version 2"]
+        self.visualization_label.setText("OGM Version 1")
         layout.addWidget(self.visualization_label, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         # Robot map
         self.robot_map = RobotMap(DEFAULT_GRID_SIZE)
         layout.addWidget(self.robot_map, alignment=Qt.AlignmentFlag.AlignHCenter)
 
+        self.map_version_button = QPushButton("Change Map Version", self)
+        self.map_version_button.clicked.connect(self.change_map_version)
+        layout.addWidget(self.map_version_button)
+
         self.csv_dialog = RobotDialog(self, TUTORIAL_CSV_PATH)
         self.csv_dialog.setFixedHeight(75)
         self.csv_dialog.setFixedWidth(600)
         self.csv_dialog.set_color("white", "black", "#252625", "#525452")
         layout.addWidget(self.csv_dialog)
+
+
+
+    def change_map_version(self):
+        self.map_version += 1
+        self.robot_map.reset_map()
+        self.visualization_label.setText(self.map_version_names[self.map_version % 3])
 
     def init_debug_sliders(self):
         self.lidar_sliders = []
@@ -214,9 +224,9 @@ class SimulationApp(QMainWindow):
             self.robot_map.first_calculate_matrix(robot_pos, coords)
         if self.map_version % 3 == 2:
             self.objectlist = self.robot_map.second_calculate_matrix(robot_pos, coords,
-                                                                        self.lidar_values,
-                                                                        yaw, rays_data,
-                                                                        self.objectlist)
+                                                                     self.lidar_values,
+                                                                     yaw, rays_data,
+                                                                     self.objectlist)
         if self.map_version % 3 == 0:
             self.robot_map.third_calculate_matrix(robot_pos, coords,self.lidar_values, yaw, rays_data)
         self.map_counter = 0

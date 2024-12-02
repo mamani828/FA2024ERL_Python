@@ -1,7 +1,7 @@
 import csv
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (QMainWindow, QVBoxLayout, QLabel, QPushButton,
+from PyQt6.QtWidgets import (QVBoxLayout, QLabel, QPushButton,
                              QMessageBox, QWidget,
                              QSizePolicy)
 from PyQt6.QtGui import QColor, QPalette
