@@ -164,11 +164,11 @@ class RobotMap(QWidget):
         a = self.end_angle *(math.pi/180)
         b = (self.start_angle - self.end_angle)*(math.pi/180)
         ray_angles =[]
-
         for i in range(self.num_rays):
             theta = float(a) + (float(b) * (float(i)/self.num_rays))
             ray_angles.append(theta)
         self.ray_angles = ray_angles
+        
         for ray_x, ray_y in ray_pos:
             if np.isnan(ray_x) or np.isnan(ray_y):
 

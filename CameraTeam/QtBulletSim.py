@@ -81,7 +81,7 @@ class SimulationApp(QMainWindow):
 
         self.synth_cam_counter = 0
         self.map_counter = 0
-        self.map_version = 1
+        self.map_version = 2
         self.debug_cam_counter = 0
 
         self.lidar_values = []
