@@ -124,8 +124,6 @@ class Robot:
         
         self.__dict__.update((k, v) for k, v in kwargs.items() if k in allowed_keys)
 
-        print(self.max_velocity)
-
         for k in kwargs.keys():
             if k not in allowed_keys:
                 print("{} is not allowed to be updated".format(repr(k)))
@@ -134,46 +132,60 @@ class Robot:
         # Return the robot_id when the class instance is called
         return self.robot_id
 
-class Object:
-    """
-    Object class that initializes a box.
-    """
-    def __init__(self, coordinates, color):
-        """
-        Instance variables such as color and coordinates that
-        set the color and coordinates of the box.
+class CubeCreator:
+    def __init__(self):
+        self.cube_count = 0
+        self.button_id = p.addUserDebugParameter("Create Cube", 1, 0, 1)
+        self.prev_button_state = p.readUserDebugParameter(self.button_id)
+        self.create_info_text()
 
-        Args:
-            coordinates: (x, y, z) coordinates of the box.
-            color: color of the box.
-        """
-        self.color = color
-        self.coordinates = coordinates
-        #self.object_id = self.loading_box()  # Storing the object's ID
+    def create_info_text(self):
+        self.info_text_id = p.addUserDebugText(
+            text="Cubes created: 0",
+            textPosition=[0, 0, 3],
+            textColorRGB=[1, 1, 1],
+            textSize=1.5
+        )
 
-    def loading_box(self):
-        """
-        Loads the box into the simulation with the given instance
-        variables. The box is g
+    def update_info_text(self, x, y):
+            p.addUserDebugText(
+                text=f"Cubes created: {self.cube_count}",
+                textPosition=[x, y, 3],
+                textColorRGB=[1, 1, 1],
+                textSize=1.5,
+                replaceItemUniqueId=self.info_text_id
+            )
 
-        Returns:
-            Multibody: Multibody object 
-        """
-        half_extents = [0.3, 0.3, 0.3]
-        box_coordinates = self.coordinates
-        box_orientation = [0, 0, 0]
-        initial_box_orientation = p.getQuaternionFromEuler(box_orientation)
+    def update_cube_button(self, robot_pos):
+        current_button_state = p.readUserDebugParameter(self.button_id)
+        if current_button_state != self.prev_button_state:
+            self.create_new_cube()
+            self.cube_count += 1
+            self.update_info_text(robot_pos[0], robot_pos[1])
+            self.prev_button_state = current_button_state
 
-        box_collision_shape = p.createCollisionShape(shapeType=p.GEOM_BOX, halfExtents=half_extents)
-        box_visual_shape = p.createVisualShape(shapeType=p.GEOM_BOX, halfExtents=half_extents, rgbaColor=self.color)
+    @staticmethod
+    def create_new_cube():
+        cube_size = 0.3
+        x = np.random.normal(0, 4)
+        y = np.random.normal(0, 4)
+        position = [x, y, cube_size/2]
+        orientation = p.getQuaternionFromEuler([0, 0, 0])
+        color = list(np.random.uniform(0, 1, 3)) + [1]
+        visual_shape = p.createVisualShape(shapeType=p.GEOM_BOX,
+                                        halfExtents=[cube_size/2]*3,
+                                        rgbaColor=color)
 
-        # Create a multibody and return its ID
-        return p.createMultiBody(baseMass=BOX_MASS, baseCollisionShapeIndex=box_collision_shape,
-                                 baseVisualShapeIndex=box_visual_shape,
-                                 basePosition=box_coordinates,
-                                 baseOrientation=initial_box_orientation)
+        collision_shape = p.createCollisionShape(shapeType=p.GEOM_BOX,
+                                                halfExtents=[cube_size/2]*3)
 
-    def create_wall(self, position, WALL_SIZE, WALL_COLOR):
+        p.createMultiBody(baseMass=1, baseVisualShapeIndex=visual_shape,
+                        baseCollisionShapeIndex=collision_shape,
+                        basePosition=position,
+                        baseOrientation=orientation)
+
+    @staticmethod
+    def create_wall(position, WALL_SIZE, WALL_COLOR):
         """
         Create a wall in the PyBullet environment.
         
