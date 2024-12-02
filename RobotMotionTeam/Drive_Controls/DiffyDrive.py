@@ -58,11 +58,8 @@ class PybulletEnvironment:
         # initializing pid and its corresponding plot
         self.linear_pid=PID(kp=1.0, ki=0, kd=0.01)
         self.angular_pid=PID(kp=1.0, ki=0, kd=0.01)
-        
-        self.path.update_control_points()
+        self.path.get_Path()
         self.path.draw_bezier_path()
-        # self.linear_pid.init_pid_plot()
-        print(self.path.get_bezier_curve(1))
         self.follower=PurePursuit(self.jackal_robot,self.path.get_Path(),0.5)
         
         while True:
