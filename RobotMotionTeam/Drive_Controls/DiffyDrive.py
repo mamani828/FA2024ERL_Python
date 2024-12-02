@@ -42,13 +42,13 @@ class PybulletEnvironment:
         # self.goalPointX=p.addUserDebugParameter("Goal Point X", -50, 50, 0)
         # self.goalPointY=p.addUserDebugParameter("Goal Point Y", -50, 50, 0)
         
-        self.kp_linear=p.addUserDebugParameter("kp-linear", 0, 100, 20) 
+        self.kp_linear=p.addUserDebugParameter("kp-linear", 0, 100, 40) 
         self.ki_linear=p.addUserDebugParameter("ki-linear", 0, 10, 0)
-        self.kd_linear=p.addUserDebugParameter("kd-linear", 0, 10, 0.2)
+        self.kd_linear=p.addUserDebugParameter("kd-linear", 0, 10, 1.0)
         
-        self.kp_angular=p.addUserDebugParameter("kp-angular", 0, 100, 20) 
+        self.kp_angular=p.addUserDebugParameter("kp-angular", 0, 100, 50) 
         self.ki_angular=p.addUserDebugParameter("ki-angular", 0, 50, 0)
-        self.kd_angular=p.addUserDebugParameter("kd-angular", 0, 50, 0.2)
+        self.kd_angular=p.addUserDebugParameter("kd-angular", 0, 50, 0.5)
             
             
             
@@ -60,7 +60,7 @@ class PybulletEnvironment:
         self.angular_pid=PID(kp=1.0, ki=0, kd=0.01)
         self.path.get_Path()
         self.path.draw_bezier_path()
-        self.follower=PurePursuit(self.jackal_robot,self.path.get_Path(),0.5)
+        self.follower=PurePursuit(self.jackal_robot,self.path.get_Path(1000),0.8)
         
         while True:
                 p.stepSimulation()
@@ -78,8 +78,12 @@ class PybulletEnvironment:
                 goal=self.follower.find_lookahead_point()
                 self.x_goal=goal[0]
                 self.y_goal=goal[1]
-                print(goal)
-        
+                print(self.x_goal,self.y_goal)
+                # showing the lookahead intersection point
+                p.addUserDebugLine([self.x_goal,self.y_goal-0.1,0.2],
+                                    [self.x_goal,self.y_goal+0.1 , 0.2],
+                                    lineColorRGB=[1, 0, 0], 
+                                    lineWidth=300)
             
                 self.x_error=self.x_goal-self.current_x
                 self.y_error=self.y_goal-self.current_y
@@ -89,6 +93,7 @@ class PybulletEnvironment:
                 self.linear_velocity=self.linear_pid.calculateVelocity(self.x_error)
                 self.angular_velocity=self.angular_pid.calculateVelocity(self.h_error)
                 
+                print(self.x_error)
                 # print(self.linear_velocity,self.angular_velocity)
                 # setting the velocities
                 self.jackal_robot.inverse_kinematics(self.linear_velocity,self.angular_velocity)
@@ -170,7 +175,7 @@ class Robot:
                     jointIndex=wheel,
                     controlMode=p.VELOCITY_CONTROL,
                     targetVelocity=self.vl,
-                    force = 14 # i think the torque on a jackal
+                    force = 50 # i think the torque on a jackal
                 )
             for wheel in self.wheels_right:
                 p.setJointMotorControl2(
@@ -178,7 +183,7 @@ class Robot:
                     jointIndex=wheel,
                     controlMode=p.VELOCITY_CONTROL,
                     targetVelocity=self.vr,
-                    force = 14 # i think the torque on a jackal
+                    force = 50 # i think the torque on a jackal
                 )
     def inverse_kinematics(self,v_f, v0): # converting forward+angular velocity into wheel velocities
         self.vr=v_f+self.track_radius*v0        # velocity of left wheels
