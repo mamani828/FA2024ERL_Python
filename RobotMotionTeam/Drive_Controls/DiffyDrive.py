@@ -42,11 +42,11 @@ class PybulletEnvironment:
         # self.goalPointX=p.addUserDebugParameter("Goal Point X", -50, 50, 0)
         # self.goalPointY=p.addUserDebugParameter("Goal Point Y", -50, 50, 0)
         
-        self.kp_linear=p.addUserDebugParameter("kp-linear", 0, 100, 40) 
+        self.kp_linear=p.addUserDebugParameter("kp-linear", 0, 100, 20) 
         self.ki_linear=p.addUserDebugParameter("ki-linear", 0, 10, 0)
-        self.kd_linear=p.addUserDebugParameter("kd-linear", 0, 10, 1.0)
+        self.kd_linear=p.addUserDebugParameter("kd-linear", 0, 10, 3.0)
         
-        self.kp_angular=p.addUserDebugParameter("kp-angular", 0, 100, 50) 
+        self.kp_angular=p.addUserDebugParameter("kp-angular", 0, 100, 30) 
         self.ki_angular=p.addUserDebugParameter("ki-angular", 0, 50, 0)
         self.kd_angular=p.addUserDebugParameter("kd-angular", 0, 50, 0.5)
             
@@ -59,13 +59,13 @@ class PybulletEnvironment:
         self.linear_pid=PID(kp=1.0, ki=0, kd=0.01)
         self.angular_pid=PID(kp=1.0, ki=0, kd=0.01)
         self.path.get_Path()
-        self.path.draw_bezier_path()
+        self.path.draw_bezier_path() # drawing the path the robot will follow
         self.follower=PurePursuit(self.jackal_robot,self.path.get_Path(1000),0.8)
         
         while True:
                 p.stepSimulation()
-                time.sleep(1.0 / 240.0)
-                self.read_sliders()
+                time.sleep(1.0 / 240.0) # to make sure we have even steps and dont lag out
+                self.read_sliders() # reads in input sliders
                 
                 
                 # localization
@@ -98,7 +98,7 @@ class PybulletEnvironment:
                 self.jackal_robot.inverse_kinematics(self.linear_velocity,self.angular_velocity)
                 self.jackal_robot.setVelocity()
                 
-                
+                print(self.x_goal, self.y_goal)
                 
                 
                 

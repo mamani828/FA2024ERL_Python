@@ -19,7 +19,7 @@ class Bezier:
                 self.path[i].tolist(),
                 self.path[i + 1].tolist(),
                 lineColorRGB=[1, 0, 0],
-                lineWidth=30
+                lineWidth=70
             )
     def get_bezier_curve(self, t): 
         """Computes a point on the Bezier curve at parameter t."""
