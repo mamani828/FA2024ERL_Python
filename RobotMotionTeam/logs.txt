@@ -1,3 +1,0 @@
-Log October 22:
-    - Started adding some buttons to the cylinder pybullet, and able to control the velocity with a slider
-    - Aiming to finish making a p2p program and PIDS in pybullet
