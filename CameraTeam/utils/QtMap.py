@@ -13,7 +13,7 @@ from PyQt6.QtCore import Qt
 
 COLOR_MAP = {0: QColor("white"), 1: QColor("black"),
              2: QColor("red"), 3: QColor("blue"), 4: QColor("grey")}
-DEFAULT_SCALE = 0.5  # Scale from PyBullet to map
+DEFAULT_SCALE = 0.25  # Scale from PyBullet to map
 CELL_SIZE = 10  # Pixel length/width of each cell
 WHITE = 0
 BLACK = 1
@@ -52,6 +52,7 @@ class RobotMap(QWidget):
         self.ray_len = None
         self.objectlist = None
         self.prob = 0
+        self.changed_cells = set()
         # Set the widget size based on the grid dimensions
         self.setFixedSize(self.GRID_SIZE * CELL_SIZE // 2, self.GRID_SIZE * CELL_SIZE // 2)
 
@@ -423,7 +424,9 @@ class RobotMap(QWidget):
 
                             #update for empty space detection
 
-                        self.grid_p[x][y] = self.probabilistic_update(PRIOR_OCC, SENSOR_OCC, SENSOR_EMPTY, self.grid_p[x][y], 0)
+                        val = self.probabilistic_update(PRIOR_OCC, SENSOR_OCC, SENSOR_EMPTY, self.grid_p[x][y], 0)
+                        #self.grid_p[x][y] = self.probabilistic_update(PRIOR_OCC, SENSOR_OCC, SENSOR_EMPTY, self.grid_p[x][y], 0)
+                        self.update_grid(x,y,val)
             else:
                 # Convert ray endpoint to grid coordinates
                 grid_x = int(ray_x // scaling_factor) + self.OFFSET
@@ -435,12 +438,14 @@ class RobotMap(QWidget):
                 for (x, y) in ray_path[0:-1]:
                     if 0 <= x < self.GRID_SIZE and 0 <= y < self.GRID_SIZE:
                         # Don't overwrite the robot's position or previous object hit data
-                        self.grid_p[x][y] = self.probabilistic_update(PRIOR_OCC, SENSOR_OCC, SENSOR_EMPTY, self.grid_p[x][y], 0)
-
+                        val = self.probabilistic_update(PRIOR_OCC, SENSOR_OCC, SENSOR_EMPTY, self.grid_p[x][y], 0)
+                        self.update_grid(x,y,val)
                 # Mark the hit point with BLACK (or other color if needed)
                 if 0 <= grid_x < self.GRID_SIZE and 0 <= grid_y < self.GRID_SIZE:
  
-                    self.grid_p[grid_x][grid_y] = self.probabilistic_update(PRIOR_OCC, SENSOR_OCC, SENSOR_EMPTY, self.grid_p[grid_x][grid_y], 1)
+                    #self.grid_p[grid_x][grid_y] = self.probabilistic_update(PRIOR_OCC, SENSOR_OCC, SENSOR_EMPTY, self.grid_p[grid_x][grid_y], 1)
+                    val = self.probabilistic_update(PRIOR_OCC, SENSOR_OCC, SENSOR_EMPTY, self.grid_p[grid_x][grid_y], 1)
+                    self.update_grid(grid_x,grid_y,val)
                 ray_ids.append(ray_num)
             ray_num = ray_num+1
         self.grid = self.grid_p
@@ -481,8 +486,9 @@ class RobotMap(QWidget):
         Default method for initializing a QPainter OGM
         and filling it based off of self.grid.
         """
+        painter = QPainter(self)
         if self.prob == 0:
-            painter = QPainter(self)
+            
             for row in range(self.GRID_SIZE):
                 for col in range(self.GRID_SIZE):
                     # Set the brush color based on the matrix value
@@ -496,33 +502,56 @@ class RobotMap(QWidget):
                         CELL_SIZE,
                     )
         else: 
-            painter = QPainter(self)
-            for row in range(self.GRID_SIZE):
-                for col in range(self.GRID_SIZE):
-                    # Normalize the grid value to the range [0, 255]
-                    # Assuming grid values are in a known range (e.g., 0 to max_value)
-                    max_value = 1  # Replace with the actual maximum value in your grid
-                    grayscale = np.ones((self.GRID_SIZE, self.GRID_SIZE), dtype=float)
-                    grayscale[:] = 1 - self.grid  # Darker as values approach 1
-                    intensity = int((grayscale[row][col] / max_value) * 255)
-                    
-                    # Create a QColor with the grayscale intensity
-                    color = QColor(intensity, intensity, intensity)
-                    
-                    painter.setBrush(color)
-                    painter.setPen(Qt.PenStyle.NoPen)  # Optional: remove grid lines
-                    
-                    # Draw the cell rectangle
+            # Paint the full grid only if no cells are marked as changed
+            if not self.changed_cells:
+                for row in range(self.GRID_SIZE):
+                    for col in range(self.GRID_SIZE):
+                        # Set the brush color based on the grid value
+                        if self.prob == 0:
+                            painter.setBrush(COLOR_MAP[self.grid[row][col]])
+                        else:
+                            max_value = 1  # Replace with the actual maximum value in your grid
+                            grayscale = 1 - self.grid[row][col]
+                            intensity = int((grayscale / max_value) * 255)
+                            painter.setBrush(QColor(intensity, intensity, intensity))
+                        painter.setPen(Qt.PenStyle.NoPen)
+                        painter.drawRect(
+                            col * CELL_SIZE,
+                            row * CELL_SIZE,
+                            CELL_SIZE,
+                            CELL_SIZE,
+                        )
+            else:
+                # Only update the changed cells
+                max_value = 1
+                grayscale = 1 - self.grid  # Precompute the grayscale values
+                for row, col in self.changed_cells:
+                    if self.prob == 0:
+                        painter.setBrush(COLOR_MAP[self.grid[row][col]])
+                    else:
+                        intensity = int((grayscale[row][col] / max_value) * 255)
+                        painter.setBrush(QColor(intensity, intensity, intensity))
+                    painter.setPen(Qt.PenStyle.NoPen)
                     painter.drawRect(
                         col * CELL_SIZE,
                         row * CELL_SIZE,
                         CELL_SIZE,
                         CELL_SIZE,
                     )
+    
+        # Clear changed cells after painting
+        self.changed_cells.clear()
+
+
+    def update_grid(self, row, col, new_value):
+        if self.grid[row][col] != new_value:
+            self.grid[row][col] = new_value
+            self.changed_cells.add((row, col))
 
     def reset_map(self):
         """
         Resets the OGM to all white space.
         """
         self.grid = np.zeros((self.GRID_SIZE, self.GRID_SIZE), dtype=int)
+        self.grid_p = np.ones((self.GRID_SIZE, self.GRID_SIZE), dtype=int) * 0.5
         self.update_map()
