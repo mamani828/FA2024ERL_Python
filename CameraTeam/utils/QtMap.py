@@ -20,6 +20,17 @@ BLACK = 1
 RED = 2
 BLUE = 3
 GREY = 4
+PRIOR_OCC = 0.2 
+SENSOR_OCC = 0.7
+SENSOR_EMPTY = 0.7
+#prior_occ, sensor_occ, sensor_empty,
+
+#Probabilistic OGM assumptions
+
+PRIOR_OCC = 0.2
+SENSOR_OCC = 0.7
+SENSOR_EMPTY = 0.7
+
 
 
 class RobotMap(QWidget):
@@ -30,6 +41,7 @@ class RobotMap(QWidget):
         self.OFFSET = grid_size // 4
 
         self.grid = np.zeros((grid_size, grid_size), dtype=int)
+        self.grid_p = np.ones((grid_size, grid_size), dtype=int) * 0.5
         self.robot_x = 0
         self.robot_y = 0
 
@@ -39,7 +51,7 @@ class RobotMap(QWidget):
         self.start_angle = None
         self.ray_len = None
         self.objectlist = None
-
+        self.prob = 0
         # Set the widget size based on the grid dimensions
         self.setFixedSize(self.GRID_SIZE * CELL_SIZE // 2, self.GRID_SIZE * CELL_SIZE // 2)
 
@@ -48,6 +60,7 @@ class RobotMap(QWidget):
         self.update()
 
     def first_calculate_matrix(self, robot_pos, ray_pos, scaling_factor=DEFAULT_SCALE):
+        self.prob = 0
         #  Sets previous robot position to white
         prev_robot_grid_x = int(self.robot_x // scaling_factor) + self.OFFSET
         prev_robot_grid_y = int(self.robot_y // scaling_factor) + self.OFFSET
@@ -135,6 +148,7 @@ class RobotMap(QWidget):
                                 yaw, rays_data, objectlist, distance=None,
                                 scaling_factor=DEFAULT_SCALE) -> list:
         # Reset the previous robot position to GREY
+        self.prob = 0
         self.ray_len = gui_values["ray_len"]
         self.start_angle = gui_values["start_angle"]
         self.end_angle = gui_values["end_angle"]
@@ -252,6 +266,7 @@ class RobotMap(QWidget):
         - Cells along the ray path are set to gray (if no hit occurs).
         - Ray endpoints are set to black (if a hit occurs).
         """
+        self.prob = 0
         # Reset the previous robot position to GREY
         self.ray_len = gui_values["ray_len"]
         self.start_angle = gui_values["start_angle"]
@@ -338,25 +353,172 @@ class RobotMap(QWidget):
             ray_num = ray_num+1
 
         self.update_map()
+    def fourth_calculate_matrix(self, robot_pos, ray_pos, gui_values,
+                               yaw, rays_data, distance=None,
+                               scaling_factor=DEFAULT_SCALE):
+        """
+        Implement probabilistic OGM using Arbitrary values to simulate noise i.e 30 percent change that an empty reading is wrong
+
+        """
+        # Reset the previous robot position to GREY
+        self.prob = 1
+        self.ray_len = gui_values["ray_len"]
+        self.start_angle = gui_values["start_angle"]
+        self.end_angle = gui_values["end_angle"]
+        self.num_rays = gui_values["num_rays"]
+        # hit_dat = rays_data[:, 2]
+        # car_heading = robot_pos[2]
+
+        prev_robot_grid_x = int(self.robot_x // scaling_factor) + self.OFFSET
+        prev_robot_grid_y = int(self.robot_y // scaling_factor) + self.OFFSET
+      
+
+        # Update the robot's position
+        self.robot_x, self.robot_y, _ = robot_pos
+        robot_grid_x = int(self.robot_x // scaling_factor) + self.OFFSET
+        robot_grid_y = int(self.robot_y // scaling_factor) + self.OFFSET
+        
+
+        #angle_step = (end_angle - start_angle)/(num_rays-1)
+
+
+        # Mark the ray paths using Bresenham's line algorithm
+        ray_num = 0
+        ray_ids =[]
+        #print(len(ray_pos))
+
+        a = self.end_angle *(math.pi/180)
+        b = (self.start_angle - self.end_angle)*(math.pi/180)
+        ray_angles =[]
+        # ray_from, ray_to = [], []
+        for i in range(self.num_rays):
+            theta = float(a) + (float(b) * (float(i)/self.num_rays))
+
+            ray_angles.append(theta)
+
+        self.ray_angles = ray_angles
+
+        for ray_x, ray_y in ray_pos:
+            if np.isnan(ray_x) or np.isnan(ray_y):
+
+                theta = ray_angles[ray_num]
+                adjusted_angle = theta + yaw
+
+                # Convert the adjusted angle to radians
+                #angle_rad = math.radians(adjusted_angle)
+                angle_rad = adjusted_angle - math.pi/2
+                #print(ray_num)
+                # Calculate the end coordinates of the ray using ray_len and the adjusted angle
+                ray_end_x = self.robot_x + self.ray_len * math.cos(angle_rad)
+                ray_end_y = self.robot_y + self.ray_len * math.sin(angle_rad)
+                grid_x = int(ray_end_x // scaling_factor) + self.OFFSET
+                grid_y = int(ray_end_y // scaling_factor) + self.OFFSET
+                ray_path = self.bresenham(robot_grid_x, robot_grid_y, grid_x, grid_y)
+                # Mark the path of the ray on the grid
+                prior_occ = PRIOR_OCC
+                sensor_occ = SENSOR_OCC
+                sensor_empty = SENSOR_EMPTY
+                for (x, y) in ray_path:
+                    if 0 <= x < self.GRID_SIZE and 0 <= y < self.GRID_SIZE:
+
+                            #update for empty space detection
+
+                        self.grid_p[x][y] = self.probabilistic_update(PRIOR_OCC, SENSOR_OCC, SENSOR_EMPTY, self.grid_p[x][y], 0)
+            else:
+                # Convert ray endpoint to grid coordinates
+                grid_x = int(ray_x // scaling_factor) + self.OFFSET
+                grid_y = int(ray_y // scaling_factor) + self.OFFSET
+                # Perform Bresenham's algorithm to find the path of the ray
+                ray_path = self.bresenham(robot_grid_x, robot_grid_y, grid_x, grid_y)
+
+                # Mark the path of the ray on the grid
+                for (x, y) in ray_path[0:-1]:
+                    if 0 <= x < self.GRID_SIZE and 0 <= y < self.GRID_SIZE:
+                        # Don't overwrite the robot's position or previous object hit data
+                        self.grid_p[x][y] = self.probabilistic_update(PRIOR_OCC, SENSOR_OCC, SENSOR_EMPTY, self.grid_p[x][y], 0)
+
+                # Mark the hit point with BLACK (or other color if needed)
+                if 0 <= grid_x < self.GRID_SIZE and 0 <= grid_y < self.GRID_SIZE:
+ 
+                    self.grid_p[grid_x][grid_y] = self.probabilistic_update(PRIOR_OCC, SENSOR_OCC, SENSOR_EMPTY, self.grid_p[grid_x][grid_y], 1)
+                ray_ids.append(ray_num)
+            ray_num = ray_num+1
+        self.grid = self.grid_p
+        self.update_map()
+
+    def probabilistic_update(self, prior_occ, sensor_occ, sensor_empty, grid_val, hit):
+        """
+        Probabilistic update step for a singuler grid space
+        """
+        # Calculate log odds: Odds(x) = p(x)/(1-p(x))
+
+        if hit == 1:
+            #print(1)
+            sensor_term = math.log(sensor_occ/(1-sensor_occ))
+            prior_term = math.log(prior_occ/ (1-prior_occ))
+        else:
+            #print(0)
+            sensor_term = math.log(sensor_empty/(1-sensor_empty))
+            prior_term = math.log((1-prior_occ)/prior_occ)
+        #print("grid VAL: " + str(grid_val))
+        if grid_val == 0:
+            recursive_term = 0
+        else:
+            #print(grid_val)
+            recursive_term = math.log(grid_val)
+        
+        log_odds = sensor_term + recursive_term - prior_term
+        # Log probability from Log Odds: p(x) = 1/(1+1/odds(x))
+        #Prob from log odds: p(x) = 1-1/(1+exp(logOdds))
+        #print(log_odds)
+        grid_prob = 1- 1/(1+np.exp(log_odds))
+        return grid_prob
+
+
 
     def paintEvent(self, event):
         """
         Default method for initializing a QPainter OGM
         and filling it based off of self.grid.
         """
-        painter = QPainter(self)
-        for row in range(self.GRID_SIZE):
-            for col in range(self.GRID_SIZE):
-                # Set the brush color based on the matrix value
-                painter.setBrush(COLOR_MAP[self.grid[row][col]])
-                painter.setPen(Qt.PenStyle.NoPen)  # Optional: remove grid lines
-                # Draw the cell rectangle
-                painter.drawRect(
-                    col * CELL_SIZE,
-                    row * CELL_SIZE,
-                    CELL_SIZE,
-                    CELL_SIZE,
-                )
+        if self.prob == 0:
+            painter = QPainter(self)
+            for row in range(self.GRID_SIZE):
+                for col in range(self.GRID_SIZE):
+                    # Set the brush color based on the matrix value
+                    painter.setBrush(COLOR_MAP[self.grid[row][col]])
+                    painter.setPen(Qt.PenStyle.NoPen)  # Optional: remove grid lines
+                    # Draw the cell rectangle
+                    painter.drawRect(
+                        col * CELL_SIZE,
+                        row * CELL_SIZE,
+                        CELL_SIZE,
+                        CELL_SIZE,
+                    )
+        else: 
+            painter = QPainter(self)
+            for row in range(self.GRID_SIZE):
+                for col in range(self.GRID_SIZE):
+                    # Normalize the grid value to the range [0, 255]
+                    # Assuming grid values are in a known range (e.g., 0 to max_value)
+                    max_value = 1  # Replace with the actual maximum value in your grid
+                    grayscale = np.ones((self.GRID_SIZE, self.GRID_SIZE), dtype=float)
+                    grayscale[:] = 1 - self.grid  # Darker as values approach 1
+                    intensity = int((grayscale[row][col] / max_value) * 255)
+                    
+                    # Create a QColor with the grayscale intensity
+                    color = QColor(intensity, intensity, intensity)
+                    
+                    painter.setBrush(color)
+                    painter.setPen(Qt.PenStyle.NoPen)  # Optional: remove grid lines
+                    
+                    # Draw the cell rectangle
+                    painter.drawRect(
+                        col * CELL_SIZE,
+                        row * CELL_SIZE,
+                        CELL_SIZE,
+                        CELL_SIZE,
+                    )
 
     def reset_map(self):
         """

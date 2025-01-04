@@ -227,7 +227,7 @@ class SimulationApp(QMainWindow):
                                                                      yaw, rays_data,
                                                                      self.objectlist)
         if self.map_version % 3 == 0:
-            self.robot_map.third_calculate_matrix(robot_pos, coords,self.lidar_values, yaw, rays_data)
+            self.robot_map.fourth_calculate_matrix(robot_pos, coords,self.lidar_values, yaw, rays_data)
         self.map_counter = 0
 
     def update_simulation(self):
