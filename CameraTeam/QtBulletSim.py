@@ -219,15 +219,17 @@ class SimulationApp(QMainWindow):
     def gui_update_map(self, robot_pos, rays_data, coords):
         ray_len = self.lidar_values["ray_len"]
         yaw = self.robot.get_yaw()
-        if self.map_version % 3 == 1:
+        if self.map_version % 4 == 1:
             self.robot_map.first_calculate_matrix(robot_pos, coords)
-        if self.map_version % 3 == 2:
+        if self.map_version % 4 == 2:
             self.objectlist = self.robot_map.second_calculate_matrix(robot_pos, coords,
                                                                      self.lidar_values,
                                                                      yaw, rays_data,
                                                                      self.objectlist)
-        if self.map_version % 3 == 0:
-            self.robot_map.fourth_calculate_matrix(robot_pos, coords,self.lidar_values, yaw, rays_data)
+        if self.map_version % 4 == 3:
+            self.robot_map.third_calculate_matrix(robot_pos, coords, self.lidar_values, yaw, rays_data)
+        if self.map_version % 4 == 0:
+            self.robot_map.fourth_calculate_matrix(robot_pos, coords, self.lidar_values, yaw, rays_data)
         self.map_counter = 0
 
     def update_simulation(self):

@@ -20,17 +20,11 @@ BLACK = 1
 RED = 2
 BLUE = 3
 GREY = 4
-PRIOR_OCC = 0.2 
-SENSOR_OCC = 0.7
-SENSOR_EMPTY = 0.7
-#prior_occ, sensor_occ, sensor_empty,
 
 #Probabilistic OGM assumptions
-
 PRIOR_OCC = 0.2
 SENSOR_OCC = 0.7
 SENSOR_EMPTY = 0.7
-
 
 
 class RobotMap(QWidget):
@@ -62,108 +56,30 @@ class RobotMap(QWidget):
 
     def first_calculate_matrix(self, robot_pos, ray_pos, scaling_factor=DEFAULT_SCALE):
         self.prob = 0
-        #  Sets previous robot position to white
-        prev_robot_grid_x = int(self.robot_x // scaling_factor) + self.OFFSET
-        prev_robot_grid_y = int(self.robot_y // scaling_factor) + self.OFFSET
-        self.grid[prev_robot_grid_x][prev_robot_grid_y] = WHITE
 
-        # Get new robot position and set color in map
-        self.robot_x, self.robot_y, _ = robot_pos
-        robot_grid_x = int(self.robot_x // scaling_factor) + self.OFFSET
-        robot_grid_y = int(self.robot_y // scaling_factor) + self.OFFSET
-        self.grid[robot_grid_x][robot_grid_y] = RED
+        robot_grid_x, robot_grid_y = self.compensate_movement(scaling_factor, robot_pos)
 
         #  Iterates through ray data and sets position to black
         for ray_x, ray_y in ray_pos:
             if np.isnan(ray_x) or np.isnan(ray_y):
                 continue
-            grid_x = int(ray_x // scaling_factor) + self.OFFSET
-            grid_y = int(ray_y // scaling_factor) + self.OFFSET
+            grid_x, grid_y = self.to_grid(scaling_factor, ray_x, ray_y)
             if (grid_x == robot_grid_x and grid_y == robot_grid_y):
                 continue
             self.grid[int(grid_x)][int(grid_y)] = BLACK
 
         self.update_map()
 
-    def bresenham(self, x1, y1, x2, y2):
-        """Bresenham's line algorithm for calculating the path between two points on a grid."""
-        points = []
-        dx = abs(x2 - x1)
-        dy = abs(y2 - y1)
-        sx = 1 if x1 < x2 else -1
-        sy = 1 if y1 < y2 else -1
-        err = dx - dy
-
-        while True:
-            points.append((x1, y1))
-            if x1 == x2 and y1 == y2:
-                break
-            e2 = 2 * err
-            if e2 > -dy:
-                err -= dy
-                x1 += sx
-            if e2 < dx:
-                err += dx
-                y1 += sy
-        return points
-
-    def is_within_lidar_cone(self, point_x, point_y, robot_x, robot_y,
-                             yaw, ray_angles, ray_len,
-                             scaling_factor=DEFAULT_SCALE) -> bool:
-        """
-        Determines if a point is within the LIDAR cone using a list of ray angles.
-        
-        Args:
-            point_x, point_y: The coordinates of the point to check.
-            robot_x, robot_y: The robot's position.
-            yaw: The robot's current yaw (orientation) in radians.
-            ray_angles: List of angles (in radians) that define the LIDAR rays.
-            ray_len: The maximum range of the LIDAR rays.
-        
-        Returns:
-            bool: True if the point is within the LIDAR cone, False otherwise.
-        """
-        for theta in ray_angles:
-
-            adjusted_angle = theta + yaw
-
-            # Convert the adjusted angle to radians
-            #angle_rad = math.radians(adjusted_angle)
-            angle_rad = adjusted_angle - math.pi/2
-            #print(ray_num)
-            # Calculate the end coordinates of the ray using ray_len and the adjusted angle
-            ray_end_x = self.robot_x + self.ray_len * math.cos(angle_rad)
-            ray_end_y = self.robot_y + self.ray_len * math.sin(angle_rad)
-            grid_x = int(ray_end_x // scaling_factor) + self.OFFSET
-            grid_y = int(ray_end_y // scaling_factor) + self.OFFSET
-            ray_path = self.bresenham(robot_x, robot_y, grid_x, grid_y)
-            # Mark the path of the ray on the grid
-            for (x, y) in ray_path:
-                if 0 <= x < self.GRID_SIZE and 0 <= y < self.GRID_SIZE:
-                    if (x,y) == (point_x, point_y):
-                        return True
-
-        return False
-
     def second_calculate_matrix(self, robot_pos, ray_pos, gui_values,
                                 yaw, rays_data, objectlist, distance=None,
                                 scaling_factor=DEFAULT_SCALE) -> list:
-        # Reset the previous robot position to GREY
         self.prob = 0
         self.ray_len = gui_values["ray_len"]
         self.start_angle = gui_values["start_angle"]
         self.end_angle = gui_values["end_angle"]
         self.num_rays = gui_values["num_rays"]
 
-        prev_robot_grid_x = int(self.robot_x // scaling_factor) + self.OFFSET
-        prev_robot_grid_y = int(self.robot_y // scaling_factor) + self.OFFSET
-        self.grid[prev_robot_grid_x][prev_robot_grid_y] = WHITE
-
-        # Update the robot's position
-        self.robot_x, self.robot_y, _ = robot_pos
-        robot_grid_x = int(self.robot_x // scaling_factor) + self.OFFSET
-        robot_grid_y = int(self.robot_y // scaling_factor) + self.OFFSET
-        self.grid[robot_grid_x][robot_grid_y] = RED  # Mark the robot's position
+        robot_grid_x, robot_grid_y = self.compensate_movement(scaling_factor, robot_pos)
 
         self.objectlist = objectlist
         #angle_step = (end_angle - start_angle)/(num_rays-1)
@@ -173,7 +89,6 @@ class RobotMap(QWidget):
         ray_ids =[]
         hit_cords =[]
         path_coords =[]
-        #print(len(ray_pos))
 
 
         a = self.end_angle *(math.pi/180)
@@ -187,10 +102,8 @@ class RobotMap(QWidget):
         for ray_x, ray_y in ray_pos:
             if np.isnan(ray_x) or np.isnan(ray_y):
 
-
                 theta = ray_angles[ray_num]
                 adjusted_angle = theta + yaw
-
 
                 # Convert the adjusted angle to radians
                 #angle_rad = math.radians(adjusted_angle)
@@ -199,9 +112,8 @@ class RobotMap(QWidget):
                 # Calculate the end coordinates of the ray using ray_len and the adjusted angle
                 ray_end_x = self.robot_x + self.ray_len * math.cos(angle_rad)
                 ray_end_y = self.robot_y + self.ray_len * math.sin(angle_rad)
-                grid_x = int(ray_end_x // scaling_factor) + self.OFFSET
-                grid_y = int(ray_end_y // scaling_factor) + self.OFFSET
-                ray_path = self.bresenham(robot_grid_x, robot_grid_y, grid_x, grid_y)
+                grid_x, grid_y = self.to_grid(scaling_factor, ray_end_x, ray_end_y)
+                ray_path = RobotMap.bresenham(robot_grid_x, robot_grid_y, grid_x, grid_y)
                 # Mark the path of the ray on the grid
                 for (x, y) in ray_path:
                     if 0 <= x < self.GRID_SIZE and 0 <= y < self.GRID_SIZE:
@@ -212,10 +124,8 @@ class RobotMap(QWidget):
             else:
                 # Convert ray endpoint to grid coordinates
                 # hit_id = ray_num
-                grid_x = int(ray_x // scaling_factor) + self.OFFSET
-                grid_y = int(ray_y // scaling_factor) + self.OFFSET
-                # Perform Bresenham's algorithm to find the path of the ray
-                ray_path = self.bresenham(robot_grid_x, robot_grid_y, grid_x, grid_y)
+                grid_x, grid_y = self.to_grid(scaling_factor, ray_x, ray_y)
+                ray_path = RobotMap.bresenham(robot_grid_x, robot_grid_y, grid_x, grid_y)
 
                 # Mark the path of the ray on the grid
                 for (x, y) in ray_path:
@@ -276,15 +186,7 @@ class RobotMap(QWidget):
         # hit_dat = rays_data[:, 2]
         # car_heading = robot_pos[2]
 
-        prev_robot_grid_x = int(self.robot_x // scaling_factor) + self.OFFSET
-        prev_robot_grid_y = int(self.robot_y // scaling_factor) + self.OFFSET
-        self.grid[prev_robot_grid_x][prev_robot_grid_y] = GREY
-
-        # Update the robot's position
-        self.robot_x, self.robot_y, _ = robot_pos
-        robot_grid_x = int(self.robot_x // scaling_factor) + self.OFFSET
-        robot_grid_y = int(self.robot_y // scaling_factor) + self.OFFSET
-        self.grid[robot_grid_x][robot_grid_y] = RED  # Mark the robot's position
+        robot_grid_x, robot_grid_y = self.compensate_movement(scaling_factor, robot_pos)
 
         #angle_step = (end_angle - start_angle)/(num_rays-1)
 
@@ -318,9 +220,8 @@ class RobotMap(QWidget):
                 # Calculate the end coordinates of the ray using ray_len and the adjusted angle
                 ray_end_x = self.robot_x + self.ray_len * math.cos(angle_rad)
                 ray_end_y = self.robot_y + self.ray_len * math.sin(angle_rad)
-                grid_x = int(ray_end_x // scaling_factor) + self.OFFSET
-                grid_y = int(ray_end_y // scaling_factor) + self.OFFSET
-                ray_path = self.bresenham(robot_grid_x, robot_grid_y, grid_x, grid_y)
+                grid_x, grid_y = self.to_grid(scaling_factor, ray_end_x, ray_end_y)
+                ray_path = RobotMap.bresenham(robot_grid_x, robot_grid_y, grid_x, grid_y)
                 # Mark the path of the ray on the grid
                 for (x, y) in ray_path:
                     if 0 <= x < self.GRID_SIZE and 0 <= y < self.GRID_SIZE:
@@ -338,7 +239,7 @@ class RobotMap(QWidget):
                 grid_x = int(ray_x // scaling_factor) + self.OFFSET
                 grid_y = int(ray_y // scaling_factor) + self.OFFSET
                 # Perform Bresenham's algorithm to find the path of the ray
-                ray_path = self.bresenham(robot_grid_x, robot_grid_y, grid_x, grid_y)
+                ray_path = RobotMap.bresenham(robot_grid_x, robot_grid_y, grid_x, grid_y)
 
                 # Mark the path of the ray on the grid
                 for (x, y) in ray_path:
@@ -354,6 +255,44 @@ class RobotMap(QWidget):
             ray_num = ray_num+1
 
         self.update_map()
+
+    def is_within_lidar_cone(self, point_x, point_y, robot_x, robot_y,
+                             yaw, ray_angles, ray_len,
+                             scaling_factor=DEFAULT_SCALE) -> bool:
+        """
+        Determines if a point is within the LIDAR cone using a list of ray angles.
+        
+        Args:
+            point_x, point_y: The coordinates of the point to check.
+            robot_x, robot_y: The robot's position.
+            yaw: The robot's current yaw (orientation) in radians.
+            ray_angles: List of angles (in radians) that define the LIDAR rays.
+            ray_len: The maximum range of the LIDAR rays.
+        
+        Returns:
+            bool: True if the point is within the LIDAR cone, False otherwise.
+        """
+        for theta in ray_angles:
+
+            adjusted_angle = theta + yaw
+
+            # Convert the adjusted angle to radians
+            #angle_rad = math.radians(adjusted_angle)
+            angle_rad = adjusted_angle - math.pi/2
+            #print(ray_num)
+            # Calculate the end coordinates of the ray using ray_len and the adjusted angle
+            ray_end_x = self.robot_x + self.ray_len * math.cos(angle_rad)
+            ray_end_y = self.robot_y + self.ray_len * math.sin(angle_rad)
+            grid_x, grid_y = self.to_grid(scaling_factor, ray_end_x, ray_end_y)
+            ray_path = RobotMap.bresenham(robot_x, robot_y, grid_x, grid_y)
+            # Mark the path of the ray on the grid
+            for (x, y) in ray_path:
+                if 0 <= x < self.GRID_SIZE and 0 <= y < self.GRID_SIZE:
+                    if (x,y) == (point_x, point_y):
+                        return True
+
+        return False
+
     def fourth_calculate_matrix(self, robot_pos, ray_pos, gui_values,
                                yaw, rays_data, distance=None,
                                scaling_factor=DEFAULT_SCALE):
@@ -370,14 +309,7 @@ class RobotMap(QWidget):
         # hit_dat = rays_data[:, 2]
         # car_heading = robot_pos[2]
 
-        prev_robot_grid_x = int(self.robot_x // scaling_factor) + self.OFFSET
-        prev_robot_grid_y = int(self.robot_y // scaling_factor) + self.OFFSET
-      
-
-        # Update the robot's position
-        self.robot_x, self.robot_y, _ = robot_pos
-        robot_grid_x = int(self.robot_x // scaling_factor) + self.OFFSET
-        robot_grid_y = int(self.robot_y // scaling_factor) + self.OFFSET
+        robot_grid_x, robot_grid_y = self.compensate_movement(scaling_factor, robot_pos)
         
 
         #angle_step = (end_angle - start_angle)/(num_rays-1)
@@ -412,9 +344,8 @@ class RobotMap(QWidget):
                 # Calculate the end coordinates of the ray using ray_len and the adjusted angle
                 ray_end_x = self.robot_x + self.ray_len * math.cos(angle_rad)
                 ray_end_y = self.robot_y + self.ray_len * math.sin(angle_rad)
-                grid_x = int(ray_end_x // scaling_factor) + self.OFFSET
-                grid_y = int(ray_end_y // scaling_factor) + self.OFFSET
-                ray_path = self.bresenham(robot_grid_x, robot_grid_y, grid_x, grid_y)
+                grid_x, grid_y = self.to_grid(scaling_factor, ray_end_x, ray_end_y)
+                ray_path = RobotMap.bresenham(robot_grid_x, robot_grid_y, grid_x, grid_y)
                 # Mark the path of the ray on the grid
                 prior_occ = PRIOR_OCC
                 sensor_occ = SENSOR_OCC
@@ -432,7 +363,7 @@ class RobotMap(QWidget):
                 grid_x = int(ray_x // scaling_factor) + self.OFFSET
                 grid_y = int(ray_y // scaling_factor) + self.OFFSET
                 # Perform Bresenham's algorithm to find the path of the ray
-                ray_path = self.bresenham(robot_grid_x, robot_grid_y, grid_x, grid_y)
+                ray_path = RobotMap.bresenham(robot_grid_x, robot_grid_y, grid_x, grid_y)
 
                 # Mark the path of the ray on the grid
                 for (x, y) in ray_path[0:-1]:
@@ -478,8 +409,6 @@ class RobotMap(QWidget):
         #print(log_odds)
         grid_prob = 1- 1/(1+np.exp(log_odds))
         return grid_prob
-
-
 
     def paintEvent(self, event):
         """
@@ -542,7 +471,6 @@ class RobotMap(QWidget):
         # Clear changed cells after painting
         self.changed_cells.clear()
 
-
     def update_grid(self, row, col, new_value):
         if self.grid[row][col] != new_value:
             self.grid[row][col] = new_value
@@ -555,3 +483,40 @@ class RobotMap(QWidget):
         self.grid = np.zeros((self.GRID_SIZE, self.GRID_SIZE), dtype=int)
         self.grid_p = np.ones((self.GRID_SIZE, self.GRID_SIZE), dtype=int) * 0.5
         self.update_map()
+
+    def to_grid(self, scaling_factor, *args):
+        for arg in args:
+            yield int(arg // scaling_factor) + self.OFFSET
+    
+    def compensate_movement(self, scaling_factor, robot_pos):
+        prev_robot_grid_x, prev_robot_grid_y = self.to_grid(scaling_factor, self.robot_x, self.robot_y)
+        self.grid[prev_robot_grid_x][prev_robot_grid_y] = GREY
+
+        self.robot_x, self.robot_y, _ = robot_pos
+        robot_grid_x, robot_grid_y = self.to_grid(scaling_factor, self.robot_x, self.robot_y)
+        self.grid[robot_grid_x][robot_grid_y] = RED
+
+        return robot_grid_x, robot_grid_y
+
+    @staticmethod
+    def bresenham(x1, y1, x2, y2):
+        """Bresenham's line algorithm for calculating the path between two points on a grid."""
+        points = []
+        dx = abs(x2 - x1)
+        dy = abs(y2 - y1)
+        sx = 1 if x1 < x2 else -1
+        sy = 1 if y1 < y2 else -1
+        err = dx - dy
+
+        while True:
+            points.append((x1, y1))
+            if x1 == x2 and y1 == y2:
+                break
+            e2 = 2 * err
+            if e2 > -dy:
+                err -= dy
+                x1 += sx
+            if e2 < dx:
+                err += dx
+                y1 += sy
+        return points
