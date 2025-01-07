@@ -61,6 +61,10 @@ class RobotMap(QWidget):
 
     def first_calculate_matrix(self, robot_pos, ray_pos, scaling_factor=DEFAULT_SCALE):
         self.prob = 0
+        if self.initial == 1: 
+            self.pixmap.fill(QColor('white')) #intilize with gray background
+            self.initial = 0
+        self.prob = 0
 
         robot_grid_x, robot_grid_y = self.compensate_movement(scaling_factor, robot_pos)
 
@@ -71,13 +75,18 @@ class RobotMap(QWidget):
             grid_x, grid_y = self.to_grid(scaling_factor, ray_x, ray_y)
             if (grid_x == robot_grid_x and grid_y == robot_grid_y):
                 continue
-            self.grid[int(grid_x)][int(grid_y)] = BLACK
+            #self.grid[int(grid_x)][int(grid_y)] = BLACK
+            self.update_grid(int(grid_x), int(grid_y), BLACK)
 
         self.update_cell()
 
     def second_calculate_matrix(self, robot_pos, ray_pos, gui_values,
                                 yaw, rays_data, objectlist, distance=None,
                                 scaling_factor=DEFAULT_SCALE) -> list:
+        if self.initial == 1: 
+            self.pixmap.fill(QColor('white')) #intilize with gray background
+            self.initial = 0
+        self.prob = 0
         self.prob = 0
         self.ray_len = gui_values["ray_len"]
         self.start_angle = gui_values["start_angle"]
@@ -162,10 +171,13 @@ class RobotMap(QWidget):
                 #print(count)
                 for hits_x, hits_y in hit_cords:
                     if hits_x == obj_x and hits_y == obj_y:
-                        self.grid[obj_x][obj_y] = BLACK
+                        #self.grid[obj_x][obj_y] = BLACK
+                        self.update_grid(obj_x, obj_y, BLACK)
+                        
                         break
                 else:
-                    self.grid[obj_x][obj_y] = WHITE
+                    #self.grid[obj_x][obj_y] = WHITE
+                    self.update_grid(obj_x, obj_y, WHITE)
                     to_remove.append((obj_x, obj_y))
 
         for item in to_remove:
@@ -182,6 +194,9 @@ class RobotMap(QWidget):
         - Cells along the ray path are set to gray (if no hit occurs).
         - Ray endpoints are set to black (if a hit occurs).
         """
+        if self.initial == 1: 
+            self.pixmap.fill(QColor('white')) #intilize with gray background
+            self.initial = 0
         self.prob = 0
         # Reset the previous robot position to GREY
         self.ray_len = gui_values["ray_len"]
@@ -191,7 +206,7 @@ class RobotMap(QWidget):
         # hit_dat = rays_data[:, 2]
         # car_heading = robot_pos[2]
 
-        robot_grid_x, robot_grid_y = self.compensate_movement(scaling_factor, robot_pos)
+        robot_grid_x, robot_grid_y = self.compensate_movement_1(scaling_factor, robot_pos)
 
         #angle_step = (end_angle - start_angle)/(num_rays-1)
 
@@ -232,7 +247,8 @@ class RobotMap(QWidget):
                     if 0 <= x < self.GRID_SIZE and 0 <= y < self.GRID_SIZE:
                         # Don't overwrite the robot's position or previous object hit data
                         if self.grid[x][y] != RED and self.grid[x][y] != BLACK:
-                            self.grid[x][y] = GREY  # Mark the ray path as grey
+                            #self.grid[x][y] = GREY  # Mark the ray path as grey
+                            self.update_grid(x, y, GREY)
                             #print(f"Ray {ray_num}: angle={angle_rad}, ray_end_x={ray_end_x}, ray_end_y={ray_end_y}")
 
                             # If the ray is directly in front, color it blue
@@ -251,11 +267,14 @@ class RobotMap(QWidget):
                     if 0 <= x < self.GRID_SIZE and 0 <= y < self.GRID_SIZE:
                         # Don't overwrite the robot's position or previous object hit data
                         if self.grid[x][y] != RED and self.grid[x][y] != BLACK:
-                            self.grid[x][y] = GREY  # Mark the ray path as grey
+                            #self.grid[x][y] = GREY  # Mark the ray path as grey
+                            self.update_grid(x, y, GREY)
+
 
                 # Mark the hit point with BLACK (or other color if needed)
                 if 0 <= grid_x < self.GRID_SIZE and 0 <= grid_y < self.GRID_SIZE:
-                    self.grid[grid_x][grid_y] = BLACK
+                    #self.grid[grid_x][grid_y] = BLACK
+                    self.update_grid(grid_x, grid_y, BLACK)
                 ray_ids.append(ray_num)
             ray_num = ray_num+1
 
@@ -435,58 +454,24 @@ class RobotMap(QWidget):
     def update_cell(self):
         painter = QPainter(self.pixmap)
         #painter = QPainter(self)
-        if self.prob == 0:
-            
-            for row in range(self.GRID_SIZE):
-                for col in range(self.GRID_SIZE):
-                    # Set the brush color based on the matrix value
-                    painter.setBrush(COLOR_MAP[self.grid[row][col]])
-                    painter.setPen(Qt.PenStyle.NoPen)  # Optional: remove grid lines
-                    # Draw the cell rectangle
-                    painter.drawRect(
-                        col * CELL_SIZE,
-                        row * CELL_SIZE,
-                        CELL_SIZE,
-                        CELL_SIZE,
-                    )
-        else: 
-            # Paint the full grid only if no cells are marked as changed
-            if not self.changed_cells:
-                for row in range(self.GRID_SIZE):
-                    for col in range(self.GRID_SIZE):
-                        # Set the brush color based on the grid value
-                        if self.prob == 0:
-                            painter.setBrush(COLOR_MAP[self.grid[row][col]])
-                        else:
-                            max_value = 1  # Replace with the actual maximum value in your grid
-                            grayscale = 1 - self.grid[row][col]
-                            intensity = int((grayscale / max_value) * 255)
-                            painter.setBrush(QColor(intensity, intensity, intensity))
-                        painter.setPen(Qt.PenStyle.NoPen)
-                        painter.drawRect(
-                            col * CELL_SIZE,
-                            row * CELL_SIZE,
-                            CELL_SIZE,
-                            CELL_SIZE,
-                        )
+        
+        # Only update the changed cells
+        max_value = 1
+        grayscale = 1 - self.grid  # Precompute the grayscale values
+        for row, col in self.changed_cells:
+            if self.prob == 0:
+                painter.setBrush(COLOR_MAP[self.grid[row][col]])
             else:
-                # Only update the changed cells
-                max_value = 1
-                grayscale = 1 - self.grid  # Precompute the grayscale values
-                for row, col in self.changed_cells:
-                    if self.prob == 0:
-                        painter.setBrush(COLOR_MAP[self.grid[row][col]])
-                    else:
-                        intensity = int((grayscale[row][col] / max_value) * 255)
-                        painter.setBrush(QColor(intensity, intensity, intensity))
-                    painter.setPen(Qt.PenStyle.NoPen)
-                    painter.drawRect(
-                        col * CELL_SIZE,
-                        row * CELL_SIZE,
-                        CELL_SIZE,
-                        CELL_SIZE,
-                    )
-    
+                intensity = int((grayscale[row][col] / max_value) * 255)
+                painter.setBrush(QColor(intensity, intensity, intensity))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRect(
+                col * CELL_SIZE,
+                row * CELL_SIZE,
+                CELL_SIZE,
+                CELL_SIZE,
+        )
+
         # Clear changed cells after painting
         self.changed_cells.clear()
         self.update()
@@ -499,6 +484,7 @@ class RobotMap(QWidget):
         self.grid = np.zeros((self.GRID_SIZE, self.GRID_SIZE), dtype=int)
         self.grid_p = np.ones((self.GRID_SIZE, self.GRID_SIZE), dtype=int) * 0.5
         self.initial = 1
+        self.changed_cells.clear()
         self.update_map()
 
     def to_grid(self, scaling_factor, *args):
@@ -507,11 +493,25 @@ class RobotMap(QWidget):
     
     def compensate_movement(self, scaling_factor, robot_pos):
         prev_robot_grid_x, prev_robot_grid_y = self.to_grid(scaling_factor, self.robot_x, self.robot_y)
-        self.grid[prev_robot_grid_x][prev_robot_grid_y] = GREY
+        #self.grid[prev_robot_grid_x][prev_robot_grid_y] = GREY
+        self.update_grid(prev_robot_grid_x, prev_robot_grid_y, WHITE)
 
         self.robot_x, self.robot_y, _ = robot_pos
         robot_grid_x, robot_grid_y = self.to_grid(scaling_factor, self.robot_x, self.robot_y)
-        self.grid[robot_grid_x][robot_grid_y] = RED
+        #self.grid[robot_grid_x][robot_grid_y] = RED
+        self.update_grid(robot_grid_x, robot_grid_y, RED)
+
+        return robot_grid_x, robot_grid_y
+    
+    def compensate_movement_1(self, scaling_factor, robot_pos):
+        prev_robot_grid_x, prev_robot_grid_y = self.to_grid(scaling_factor, self.robot_x, self.robot_y)
+        #self.grid[prev_robot_grid_x][prev_robot_grid_y] = GREY
+        self.update_grid(prev_robot_grid_x, prev_robot_grid_y, GREY)
+
+        self.robot_x, self.robot_y, _ = robot_pos
+        robot_grid_x, robot_grid_y = self.to_grid(scaling_factor, self.robot_x, self.robot_y)
+        #self.grid[robot_grid_x][robot_grid_y] = RED
+        self.update_grid(robot_grid_x, robot_grid_y, RED)
 
         return robot_grid_x, robot_grid_y
 
