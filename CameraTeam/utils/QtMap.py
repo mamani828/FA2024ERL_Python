@@ -6,15 +6,15 @@ import math
 import numpy as np
 
 from PyQt6.QtWidgets import QWidget
-from PyQt6.QtGui import QPainter, QColor
+from PyQt6.QtGui import QPainter, QColor, QPixmap
 from PyQt6.QtCore import Qt
 
 
 
 COLOR_MAP = {0: QColor("white"), 1: QColor("black"),
              2: QColor("red"), 3: QColor("blue"), 4: QColor("grey")}
-DEFAULT_SCALE = 0.25  # Scale from PyBullet to map
-CELL_SIZE = 10  # Pixel length/width of each cell
+DEFAULT_SCALE = 0.1  # Scale from PyBullet to map
+CELL_SIZE = 5  # Pixel length/width of each cell
 WHITE = 0
 BLACK = 1
 RED = 2
@@ -50,6 +50,11 @@ class RobotMap(QWidget):
         # Set the widget size based on the grid dimensions
         self.setFixedSize(self.GRID_SIZE * CELL_SIZE // 2, self.GRID_SIZE * CELL_SIZE // 2)
 
+        # Create QPixmap for an off-screen buffer
+        self.pixmap = QPixmap(self.GRID_SIZE * CELL_SIZE // 2, self.GRID_SIZE * CELL_SIZE // 2)
+        self.pixmap.fill(QColor('gray')) 
+        self.initial = 1 
+
     def update_map(self):
         """Update the grid and trigger a repaint."""
         self.update()
@@ -68,7 +73,7 @@ class RobotMap(QWidget):
                 continue
             self.grid[int(grid_x)][int(grid_y)] = BLACK
 
-        self.update_map()
+        self.update_cell()
 
     def second_calculate_matrix(self, robot_pos, ray_pos, gui_values,
                                 yaw, rays_data, objectlist, distance=None,
@@ -166,7 +171,7 @@ class RobotMap(QWidget):
         for item in to_remove:
             self.objectlist.remove(item)
 
-        self.update_map()
+        self.update_cell()
         return self.objectlist
 
     def third_calculate_matrix(self, robot_pos, ray_pos, gui_values,
@@ -254,7 +259,7 @@ class RobotMap(QWidget):
                 ray_ids.append(ray_num)
             ray_num = ray_num+1
 
-        self.update_map()
+        self.update_cell()
 
     def is_within_lidar_cone(self, point_x, point_y, robot_x, robot_y,
                              yaw, ray_angles, ray_len,
@@ -301,6 +306,10 @@ class RobotMap(QWidget):
 
         """
         # Reset the previous robot position to GREY
+        #self.pixmap.fill(QColor('gray')) 
+        if self.initial == 1: 
+            self.pixmap.fill(QColor('gray')) #intilize with gray background
+            self.initial = 0
         self.prob = 1
         self.ray_len = gui_values["ray_len"]
         self.start_angle = gui_values["start_angle"]
@@ -380,7 +389,7 @@ class RobotMap(QWidget):
                 ray_ids.append(ray_num)
             ray_num = ray_num+1
         self.grid = self.grid_p
-        self.update_map()
+        self.update_cell()
 
     def probabilistic_update(self, prior_occ, sensor_occ, sensor_empty, grid_val, hit):
         """
@@ -416,6 +425,16 @@ class RobotMap(QWidget):
         and filling it based off of self.grid.
         """
         painter = QPainter(self)
+        painter.drawPixmap(0, 0, self.pixmap)
+   
+    def update_grid(self, row, col, new_value):
+        if self.grid[row][col] != new_value:
+            self.grid[row][col] = new_value
+            self.changed_cells.add((row, col))
+    
+    def update_cell(self):
+        painter = QPainter(self.pixmap)
+        #painter = QPainter(self)
         if self.prob == 0:
             
             for row in range(self.GRID_SIZE):
@@ -470,11 +489,8 @@ class RobotMap(QWidget):
     
         # Clear changed cells after painting
         self.changed_cells.clear()
+        self.update()
 
-    def update_grid(self, row, col, new_value):
-        if self.grid[row][col] != new_value:
-            self.grid[row][col] = new_value
-            self.changed_cells.add((row, col))
 
     def reset_map(self):
         """
@@ -482,6 +498,7 @@ class RobotMap(QWidget):
         """
         self.grid = np.zeros((self.GRID_SIZE, self.GRID_SIZE), dtype=int)
         self.grid_p = np.ones((self.GRID_SIZE, self.GRID_SIZE), dtype=int) * 0.5
+        self.initial = 1
         self.update_map()
 
     def to_grid(self, scaling_factor, *args):
