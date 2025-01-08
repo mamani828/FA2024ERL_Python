@@ -4,14 +4,19 @@ import logging
 import time
 import numpy as np
 import math
+import sys
+import os
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+n_levels_up = 2
+parent_dir = current_dir
+for _ in range(n_levels_up):
+    parent_dir = os.path.abspath(os.path.join(parent_dir, ".."))
+sys.path.append(parent_dir)
+
 from RobotMotionTeam import PID
 from RobotMotionTeam import Bezier
 from RobotMotionTeam import PurePursuit
-# from RobotMotionTeam.Utils.Controllers.Pid import PID
-# from RobotMotionTeam.Utils.Controllers.PurePursuit import PurePursuit
-# Configure logging
-# from ..Utils.Controllers.Pid import Pid
-# import ..Utils.Controllers.Pid 
 
 logging.basicConfig(
     filename="./RobotMotionTeam/Simulation_logging/Diffy_simulation.log",
