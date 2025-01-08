@@ -348,7 +348,7 @@ class RobotMap(QWidget):
         ray_ids =[]
         #print(len(ray_pos))
 
-        a = self.end_angle *(math.pi/180)
+        a = self.start_angle *(math.pi/180)
         b = (self.start_angle - self.end_angle)*(math.pi/180)
         ray_angles =[]
         # ray_from, ray_to = [], []
@@ -364,10 +364,11 @@ class RobotMap(QWidget):
 
                 theta = ray_angles[ray_num]
                 adjusted_angle = theta + yaw
+                #print(yaw)
 
                 # Convert the adjusted angle to radians
                 #angle_rad = math.radians(adjusted_angle)
-                angle_rad = adjusted_angle - math.pi/2
+                angle_rad = adjusted_angle 
                 #print(ray_num)
                 # Calculate the end coordinates of the ray using ray_len and the adjusted angle
                 ray_end_x = self.robot_x + self.ray_len * math.cos(angle_rad)
@@ -375,9 +376,6 @@ class RobotMap(QWidget):
                 grid_x, grid_y = self.to_grid(scaling_factor, ray_end_x, ray_end_y)
                 ray_path = RobotMap.bresenham(robot_grid_x, robot_grid_y, grid_x, grid_y)
                 # Mark the path of the ray on the grid
-                prior_occ = PRIOR_OCC
-                sensor_occ = SENSOR_OCC
-                sensor_empty = SENSOR_EMPTY
                 for (x, y) in ray_path:
                     if 0 <= x < self.GRID_SIZE and 0 <= y < self.GRID_SIZE:
 
