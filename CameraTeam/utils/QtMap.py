@@ -87,12 +87,6 @@ class RobotMap(QWidget):
             self.pixmap.fill(QColor('white')) #intilize with gray background
             self.initial = 0
         self.prob = 0
-        self.prob = 0
-        self.ray_len = gui_values["ray_len"]
-        self.start_angle = gui_values["start_angle"]
-        self.end_angle = gui_values["end_angle"]
-        self.num_rays = gui_values["num_rays"]
-
         robot_grid_x, robot_grid_y = self.compensate_movement(scaling_factor, robot_pos)
 
         self.objectlist = objectlist
@@ -104,24 +98,16 @@ class RobotMap(QWidget):
         hit_cords =[]
         path_coords =[]
 
-
-        a = self.end_angle *(math.pi/180)
-        b = (self.start_angle - self.end_angle)*(math.pi/180)
-        ray_angles =[]
-        for i in range(self.num_rays):
-            theta = float(a) + (float(b) * (float(i)/self.num_rays))
-            ray_angles.append(theta)
-        self.ray_angles = ray_angles
-        
+        self.get_angles(gui_values)
         for ray_x, ray_y in ray_pos:
             if np.isnan(ray_x) or np.isnan(ray_y):
 
-                theta = ray_angles[ray_num]
+                theta = self.ray_angles[ray_num]
                 adjusted_angle = theta + yaw
 
                 # Convert the adjusted angle to radians
                 #angle_rad = math.radians(adjusted_angle)
-                angle_rad = adjusted_angle - math.pi/2
+                angle_rad = adjusted_angle
                 #print(ray_num)
                 # Calculate the end coordinates of the ray using ray_len and the adjusted angle
                 ray_end_x = self.robot_x + self.ray_len * math.cos(angle_rad)
@@ -198,44 +184,23 @@ class RobotMap(QWidget):
             self.pixmap.fill(QColor('white')) #intilize with gray background
             self.initial = 0
         self.prob = 0
-        # Reset the previous robot position to GREY
-        self.ray_len = gui_values["ray_len"]
-        self.start_angle = gui_values["start_angle"]
-        self.end_angle = gui_values["end_angle"]
-        self.num_rays = gui_values["num_rays"]
-        # hit_dat = rays_data[:, 2]
-        # car_heading = robot_pos[2]
 
         robot_grid_x, robot_grid_y = self.compensate_movement_1(scaling_factor, robot_pos)
 
         #angle_step = (end_angle - start_angle)/(num_rays-1)
-
-
-        # Mark the ray paths using Bresenham's line algorithm
         ray_num = 0
         ray_ids =[]
         #print(len(ray_pos))
-
-        a = self.end_angle *(math.pi/180)
-        b = (self.start_angle - self.end_angle)*(math.pi/180)
-        ray_angles =[]
-        # ray_from, ray_to = [], []
-        for i in range(self.num_rays):
-            theta = float(a) + (float(b) * (float(i)/self.num_rays))
-
-            ray_angles.append(theta)
-
-        self.ray_angles = ray_angles
-
+        self.get_angles(gui_values)
         for ray_x, ray_y in ray_pos:
             if np.isnan(ray_x) or np.isnan(ray_y):
 
-                theta = ray_angles[ray_num]
+                theta = self.ray_angles[ray_num]
                 adjusted_angle = theta + yaw
 
                 # Convert the adjusted angle to radians
                 #angle_rad = math.radians(adjusted_angle)
-                angle_rad = adjusted_angle - math.pi/2
+                angle_rad = adjusted_angle
                 #print(ray_num)
                 # Calculate the end coordinates of the ray using ray_len and the adjusted angle
                 ray_end_x = self.robot_x + self.ray_len * math.cos(angle_rad)
@@ -317,6 +282,31 @@ class RobotMap(QWidget):
 
         return False
 
+    def get_angles(self, gui_values):
+        self.ray_len = gui_values["ray_len"]
+        self.start_angle = gui_values["start_angle"]
+        self.end_angle = gui_values["end_angle"]
+        self.num_rays = gui_values["num_rays"]
+
+        
+
+        #angle_step = (end_angle - start_angle)/(num_rays-1)
+        
+        #print(len(ray_pos))
+
+        a = self.start_angle *(math.pi/180)
+        b = (self.start_angle - self.end_angle)*(math.pi/180)
+        ray_angles =[]
+        # ray_from, ray_to = [], []
+        for i in range(self.num_rays):
+            theta = float(a) + (float(b) * (float(i)/self.num_rays))
+
+            ray_angles.append(theta)
+
+        self.ray_angles = ray_angles
+
+
+
     def fourth_calculate_matrix(self, robot_pos, ray_pos, gui_values,
                                yaw, rays_data, distance=None,
                                scaling_factor=DEFAULT_SCALE):
@@ -338,31 +328,15 @@ class RobotMap(QWidget):
         # car_heading = robot_pos[2]
 
         robot_grid_x, robot_grid_y = self.compensate_movement(scaling_factor, robot_pos)
-        
 
-        #angle_step = (end_angle - start_angle)/(num_rays-1)
-
-
-        # Mark the ray paths using Bresenham's line algorithm
+        self.get_angles(gui_values)
+    
         ray_num = 0
         ray_ids =[]
-        #print(len(ray_pos))
-
-        a = self.start_angle *(math.pi/180)
-        b = (self.start_angle - self.end_angle)*(math.pi/180)
-        ray_angles =[]
-        # ray_from, ray_to = [], []
-        for i in range(self.num_rays):
-            theta = float(a) + (float(b) * (float(i)/self.num_rays))
-
-            ray_angles.append(theta)
-
-        self.ray_angles = ray_angles
-
         for ray_x, ray_y in ray_pos:
             if np.isnan(ray_x) or np.isnan(ray_y):
 
-                theta = ray_angles[ray_num]
+                theta = self.ray_angles[ray_num]
                 adjusted_angle = theta + yaw
                 #print(yaw)
 
